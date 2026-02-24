@@ -1,0 +1,37 @@
+services:
+
+  postgres:
+    image: postgres:18
+    container_name: fuelnet_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fuelnetdb
+      POSTGRES_USER: fuelnet
+      POSTGRES_PASSWORD: fuelnet123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuelnet -d fuelnetdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  fuel-app:
+    build: ./fuelnet_back
+    container_name: fuelnet_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3015:3015"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fuelnetdb
+      SPRING_DATASOURCE_USERNAME: fuelnet
+      SPRING_DATASOURCE_PASSWORD: fuelnet123
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
