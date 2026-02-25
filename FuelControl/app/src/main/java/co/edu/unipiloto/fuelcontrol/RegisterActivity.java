@@ -7,6 +7,14 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.Button;
 
+import api.Client;
+import requests.AuthResponse;
+import retrofit2.Call;
+
+
+import api.IAuthApi;
+import requests.RegisterRequest;
+
 public class RegisterActivity extends AppCompatActivity {
 
     @Override
@@ -37,12 +45,50 @@ public class RegisterActivity extends AppCompatActivity {
                         "Las contraseñas no coinciden",
                         Toast.LENGTH_SHORT).show();
             }
-            else{
-                Toast.makeText(RegisterActivity.this,
-                        "Registro exitoso",
-                        Toast.LENGTH_SHORT).show();
+            else {
 
-                finish(); // vuelve al login
+                IAuthApi apiService = Client
+                        .getClient()
+                        .create(IAuthApi.class);
+
+                RegisterRequest request =
+                        new RegisterRequest(nombre, correo, password);
+
+                Call<AuthResponse> call =
+                        apiService.registerUser(request);
+
+                call.enqueue(new retrofit2.Callback<AuthResponse>() {
+
+                    @Override
+                    public void onResponse(Call<AuthResponse> call,
+                                           retrofit2.Response<AuthResponse> response) {
+
+                        if(response.isSuccessful() && response.body() != null){
+
+                            Toast.makeText(RegisterActivity.this,
+                                    response.body().getMessage(),
+                                    Toast.LENGTH_LONG).show();
+
+                            finish(); // vuelve al login
+                        }
+                        else{
+                            Toast.makeText(RegisterActivity.this,
+                                    "Error en el registro",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<AuthResponse> call,
+                                          Throwable t) {
+
+                        Toast.makeText(RegisterActivity.this,
+                                "Error de conexión",
+                                Toast.LENGTH_LONG).show();
+
+                        t.printStackTrace();
+                    }
+                });
             }
 
         });
