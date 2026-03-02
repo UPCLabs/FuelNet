@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">FuelControl</string>
+    <string name="title_activity_home">HomeActivity</string>
+    <string name="title_activity_dashboard">DashboardActivity</string>
 </resources>
