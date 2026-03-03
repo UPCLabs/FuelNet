@@ -27,20 +27,20 @@
     &quot;assignee&quot;: &quot;ElRam3n&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/UPCLabs/FuelNet&quot;,
-    &quot;accountId&quot;: &quot;40e5dc1f-3569-432e-a4a7-692118177629&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "git@github.com:UPCLabs/FuelNet.git",
+    "accountId": "b1a9d17c-ddf4-40c3-959f-0d962550a51c"
   }
-}</component>
+}]]></component>
   <component name="ProblemsViewState">
     <hideBySeverity>
       <option value="300" />
     </hideBySeverity>
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="3A92dIVFSyzZnRopphm5cN0aXQi" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -58,6 +58,7 @@
     "cidr.known.project.marker": "true",
     "git-widget-placeholder": "ramifront",
     "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/santi/upc/FuelNet/FuelControl",
     "project.structure.last.edited": "Problems",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.2",

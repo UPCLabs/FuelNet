@@ -60,10 +60,8 @@ public class MainActivity extends AppCompatActivity {
                                         response.body().getMessage(),
                                         Toast.LENGTH_LONG).show();
 
-                                // 🔥 Si quieres guardar token después
 //                                String token = response.body().getToken();
 
-                                // Ir a otra pantalla
                                 Intent intent = new Intent(MainActivity.this, InicioActivity.class);
                                 startActivity(intent);
                                 finish();
