@@ -13,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class Client {
 
-    private static final String BASE_URL = "http://192.168.0.11:3015/";
+    private static final String BASE_URL = "http://10.45.60.248:3015/";
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient(Context context) {

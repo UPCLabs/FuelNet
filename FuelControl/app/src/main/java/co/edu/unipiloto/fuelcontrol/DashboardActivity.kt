@@ -51,7 +51,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.core.net.toUri
 import co.edu.unipiloto.fuelcontrol.api.Client
-import co.edu.unipiloto.fuelcontrol.api.IStationsApi
+import co.edu.unipiloto.fuelcontrol.api.IStationApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -107,7 +107,7 @@ fun FuelControlApp() {
         val context = LocalContext.current;
 
         val apiService = remember {
-            Client.getClient(context).create(IStationsApi::class.java)
+            Client.getClient(context).create(IStationApi::class.java)
         }
 
         Scaffold(
@@ -200,7 +200,7 @@ suspend fun getLatLngFromAddress(context: Context, address: String): LatLng? {
 }
 
 @Composable
-fun MapScreen(modifier: Modifier = Modifier, apiService: IStationsApi) {
+fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
