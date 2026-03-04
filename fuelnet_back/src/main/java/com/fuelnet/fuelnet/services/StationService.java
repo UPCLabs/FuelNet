@@ -40,7 +40,7 @@ public class StationService implements IStationService {
             .stream()
             .map(fuelDto ->
                 FuelPrice.builder()
-                    .fuelType(FuelType.valueOf(fuelDto.getType()))
+                    .fuelType(FuelType.valueOf(fuelDto.getType().toUpperCase()))
                     .price(fuelDto.getPrice())
                     .station(station)
                     .build()
