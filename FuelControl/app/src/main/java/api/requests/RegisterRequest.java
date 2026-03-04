@@ -1,4 +1,4 @@
-package requests;
+package api.requests;
 
 public class RegisterRequest {
     private String name;

@@ -11,8 +11,8 @@ import android.widget.TextView;
 
 import api.Client;
 import api.IAuthApi;
-import requests.AuthResponse;
-import requests.LoginRequest;
+import api.requests.AuthResponse;
+import api.requests.LoginRequest;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                             if(response.isSuccessful() && response.body() != null){
 
                                 Toast.makeText(MainActivity.this,
-                                        response.body().getMessage(),
+                                        response.body().getToken(),
                                         Toast.LENGTH_LONG).show();
 
 
