@@ -6,6 +6,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FuelPriceDto {
+
     private String type;
     private Double price;
 }

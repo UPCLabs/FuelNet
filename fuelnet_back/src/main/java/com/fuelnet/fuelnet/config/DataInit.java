@@ -4,7 +4,6 @@ import com.fuelnet.fuelnet.enums.UserRole;
 import com.fuelnet.fuelnet.models.User;
 import com.fuelnet.fuelnet.repositories.IUserRepository;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -18,19 +17,17 @@ public class DataInit implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-
         String adminEmail = "admin@fuelnet.com";
 
         boolean exists = userRepository.existsByEmail(adminEmail);
 
         if (!exists) {
-
             User admin = User.builder()
-                    .name("admin")
-                    .email(adminEmail)
-                    .password(passwordEncoder.encode("admin"))
-                    .role(UserRole.PLATFORM_ADMIN)
-                    .build();
+                .name("admin")
+                .email(adminEmail)
+                .password(passwordEncoder.encode("admin"))
+                .role(UserRole.PLATFORM_ADMIN)
+                .build();
 
             userRepository.save(admin);
 

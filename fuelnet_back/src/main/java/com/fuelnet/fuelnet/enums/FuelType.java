@@ -4,5 +4,5 @@ public enum FuelType {
     CORRIENTE,
     EXTRA,
     DIESEL,
-    GAS
+    GAS,
 }

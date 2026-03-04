@@ -1,9 +1,8 @@
 package com.fuelnet.fuelnet.models;
 
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.util.List;
+import lombok.*;
 
 @Entity
 @Data
@@ -20,6 +19,10 @@ public class Station {
 
     private String address;
 
-    @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "station",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     private List<FuelPrice> fuelPrices;
 }
