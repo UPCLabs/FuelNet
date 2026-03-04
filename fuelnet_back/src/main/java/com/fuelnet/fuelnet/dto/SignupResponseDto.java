@@ -4,8 +4,7 @@ import lombok.*;
 
 @Data
 @AllArgsConstructor
-public class AuthResponse {
+public class SignupResponseDto {
 
     private String message;
-    private String email;
 }

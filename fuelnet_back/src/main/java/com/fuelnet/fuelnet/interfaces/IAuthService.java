@@ -1,11 +1,12 @@
 package com.fuelnet.fuelnet.interfaces;
 
-import com.fuelnet.fuelnet.dto.AuthResponse;
-import com.fuelnet.fuelnet.dto.LoginRequest;
-import com.fuelnet.fuelnet.dto.SignupRequest;
+import com.fuelnet.fuelnet.dto.LoginRequestDto;
+import com.fuelnet.fuelnet.dto.LoginResponseDto;
+import com.fuelnet.fuelnet.dto.SignupRequestDto;
+import com.fuelnet.fuelnet.dto.SignupResponseDto;
 
 public interface IAuthService {
-    AuthResponse register(SignupRequest request);
+    SignupResponseDto register(SignupRequestDto request);
 
-    AuthResponse login(LoginRequest request);
+    LoginResponseDto login(LoginRequestDto request);
 }

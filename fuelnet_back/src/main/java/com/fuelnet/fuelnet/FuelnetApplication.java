@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class FuelnetApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FuelnetApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(FuelnetApplication.class, args);
+    }
 }
