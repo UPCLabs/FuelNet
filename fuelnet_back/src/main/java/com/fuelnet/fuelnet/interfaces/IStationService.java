@@ -11,5 +11,6 @@ public interface IStationService {
 
     List<FuelPrice> getFuelPriceByStation(Long stationId);
 
+    List<Station> getAllStations();
     Station registerStation(StationCreationRequestDto request);
 }

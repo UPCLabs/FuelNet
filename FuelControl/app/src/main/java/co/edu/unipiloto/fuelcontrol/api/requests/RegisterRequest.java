@@ -1,4 +1,4 @@
-package api.requests;
+package co.edu.unipiloto.fuelcontrol.api.requests;
 
 public class RegisterRequest {
     private String name;

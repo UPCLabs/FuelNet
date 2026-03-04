@@ -7,14 +7,13 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.Button;
 
-import api.Client;
-import api.requests.AuthResponse;
-import api.requests.RegisterResponse;
+import co.edu.unipiloto.fuelcontrol.api.Client;
+import co.edu.unipiloto.fuelcontrol.api.requests.RegisterResponse;
 import retrofit2.Call;
 
 
-import api.IAuthApi;
-import api.requests.RegisterRequest;
+import co.edu.unipiloto.fuelcontrol.api.IAuthApi;
+import co.edu.unipiloto.fuelcontrol.api.requests.RegisterRequest;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -49,7 +48,7 @@ public class RegisterActivity extends AppCompatActivity {
             else {
 
                 IAuthApi apiService = Client
-                        .getClient()
+                        .getClient(RegisterActivity.this)
                         .create(IAuthApi.class);
 
                 RegisterRequest request =

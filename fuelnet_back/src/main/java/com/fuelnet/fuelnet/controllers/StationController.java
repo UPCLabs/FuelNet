@@ -3,6 +3,7 @@ package com.fuelnet.fuelnet.controllers;
 import com.fuelnet.fuelnet.dto.FuelPriceDto;
 import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.dto.StationPriceResponseDto;
+import com.fuelnet.fuelnet.dto.StationsResponseDto;
 import com.fuelnet.fuelnet.interfaces.IStationService;
 import com.fuelnet.fuelnet.models.Station;
 import java.util.List;
@@ -26,6 +27,25 @@ public class StationController {
         Station saved = stationService.registerStation(request);
 
         return ResponseEntity.ok(saved);
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping("/get-stations")
+    public ResponseEntity<?> getStations() {
+        List<Station> stations = stationService.getAllStations();
+
+        List<StationsResponseDto> stationDtos = stations
+            .stream()
+            .map(station ->
+                new StationsResponseDto(
+                    station.getId(),
+                    station.getName(),
+                    station.getAddress()
+                )
+            )
+            .toList();
+
+        return ResponseEntity.ok(stationDtos);
     }
 
     @PreAuthorize("hasRole('USER')")

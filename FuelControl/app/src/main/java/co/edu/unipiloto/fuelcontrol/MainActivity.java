@@ -1,6 +1,8 @@
 package co.edu.unipiloto.fuelcontrol;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -9,10 +11,10 @@ import android.widget.Button;
 import android.content.Intent;
 import android.widget.TextView;
 
-import api.Client;
-import api.IAuthApi;
-import api.requests.AuthResponse;
-import api.requests.LoginRequest;
+import co.edu.unipiloto.fuelcontrol.api.Client;
+import co.edu.unipiloto.fuelcontrol.api.IAuthApi;
+import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
+import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
 
                     IAuthApi apiService = Client
-                            .getClient()
+                            .getClient(MainActivity.this)
                             .create(IAuthApi.class);
 
                     LoginRequest request = new LoginRequest(correo, password);
@@ -58,9 +60,12 @@ public class MainActivity extends AppCompatActivity {
 
                             if(response.isSuccessful() && response.body() != null){
 
-                                Toast.makeText(MainActivity.this,
-                                        response.body().getToken(),
-                                        Toast.LENGTH_LONG).show();
+                                String token = response.body().getToken();
+
+                                SharedPreferences prefs = getSharedPreferences("FuelControlPrefs", MODE_PRIVATE);
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putString("token", token);
+                                editor.apply();
 
 
                                 Intent intent = new Intent(MainActivity.this, DashboardActivity.class);

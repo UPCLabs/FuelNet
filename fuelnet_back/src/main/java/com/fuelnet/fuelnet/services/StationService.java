@@ -51,4 +51,9 @@ public class StationService implements IStationService {
 
         return stationRepository.save(station);
     }
+
+    @Override
+    public List<Station> getAllStations() {
+        return stationRepository.findAll();
+    }
 }
