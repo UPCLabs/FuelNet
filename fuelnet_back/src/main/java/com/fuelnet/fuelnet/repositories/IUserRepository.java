@@ -9,5 +9,7 @@ import com.fuelnet.fuelnet.models.User;
 
 @Repository
 public interface IUserRepository extends JpaRepository<User, Long> {
+    boolean existsByEmail(String email);
+
     Optional<User> findByEmail(String email);
 }

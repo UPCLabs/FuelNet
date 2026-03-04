@@ -2,6 +2,8 @@ package com.fuelnet.fuelnet.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -37,5 +39,14 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    static RoleHierarchy roleHierarchy() {
+
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+                .role("PLATFORM_ADMIN").implies("STATION_ADMIN")
+                .role("STATION_ADMIN").implies("USER")
+                .build();
     }
 }

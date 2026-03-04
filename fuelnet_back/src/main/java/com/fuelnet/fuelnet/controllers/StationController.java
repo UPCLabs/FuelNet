@@ -2,6 +2,8 @@ package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.FuelPriceDto;
 import com.fuelnet.fuelnet.dto.StationPriceResponseDto;
+import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
+
 import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.interfaces.IStationService;
 
@@ -19,6 +21,15 @@ import java.util.List;
 public class StationController {
 
     private final IStationService stationService;
+
+    @PostMapping
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<?> registerStation(@RequestBody StationCreationRequestDto request) {
+
+        Station saved = stationService.registerStation(request);
+
+        return ResponseEntity.ok(saved);
+    }
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/{id}/prices")
