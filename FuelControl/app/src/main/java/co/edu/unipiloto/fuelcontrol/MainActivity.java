@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnLogin = findViewById(R.id.btnLogin);
         TextView tvRegistro = findViewById(R.id.tvRegistro);
 
+
         tvRegistro.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
             startActivity(intent);
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
                             "Complete todos los campos",
                             Toast.LENGTH_SHORT).show();
                 } else {
+
                     IAuthApi apiService = Client
                             .getClient()
                             .create(IAuthApi.class);
@@ -60,9 +62,8 @@ public class MainActivity extends AppCompatActivity {
                                         response.body().getMessage(),
                                         Toast.LENGTH_LONG).show();
 
-//                                String token = response.body().getToken();
 
-                                Intent intent = new Intent(MainActivity.this, InicioActivity.class);
+                                Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
                                 startActivity(intent);
                                 finish();
 
