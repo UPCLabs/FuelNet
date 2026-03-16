@@ -7,13 +7,13 @@ import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.Button;
 
-import api.Client;
-import requests.AuthResponse;
+import co.edu.unipiloto.fuelcontrol.api.Client;
+import co.edu.unipiloto.fuelcontrol.api.requests.RegisterResponse;
 import retrofit2.Call;
 
 
-import api.IAuthApi;
-import requests.RegisterRequest;
+import co.edu.unipiloto.fuelcontrol.api.IAuthApi;
+import co.edu.unipiloto.fuelcontrol.api.requests.RegisterRequest;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -48,20 +48,20 @@ public class RegisterActivity extends AppCompatActivity {
             else {
 
                 IAuthApi apiService = Client
-                        .getClient()
+                        .getClient(RegisterActivity.this)
                         .create(IAuthApi.class);
 
                 RegisterRequest request =
                         new RegisterRequest(nombre, correo, password);
 
-                Call<AuthResponse> call =
+                Call<RegisterResponse> call =
                         apiService.registerUser(request);
 
-                call.enqueue(new retrofit2.Callback<AuthResponse>() {
+                call.enqueue(new retrofit2.Callback<RegisterResponse>(){
 
                     @Override
-                    public void onResponse(Call<AuthResponse> call,
-                                           retrofit2.Response<AuthResponse> response) {
+                    public void onResponse(Call<RegisterResponse> call,
+                                           retrofit2.Response<RegisterResponse> response) {
 
                         if(response.isSuccessful() && response.body() != null){
 
@@ -79,7 +79,7 @@ public class RegisterActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onFailure(Call<AuthResponse> call,
+                    public void onFailure(Call<RegisterResponse> call,
                                           Throwable t) {
 
                         Toast.makeText(RegisterActivity.this,
