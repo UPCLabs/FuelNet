@@ -11,11 +11,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Pending
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
@@ -28,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import co.edu.unipiloto.fuelcontrol.api.Client
+import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.models.PaymentSummaryResponse
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
@@ -119,6 +128,10 @@ fun FuelControlApp() {
                     MapScreen(Modifier.padding(innerPadding), apiService)
                 }
 
+                AppDestinations.PAGOS -> {
+                    PagosScreen(modifier = Modifier.padding(innerPadding))
+                }
+
                 AppDestinations.PERFIL -> {
                     Text(
                         text = "Perfil del usuario",
@@ -166,6 +179,7 @@ enum class AppDestinations(
 ) {
     HOME("Inicio", Icons.Default.Home),
     MAPA("Mapa", Icons.Default.Map),
+    PAGOS("Pagos", Icons.Default.Payment),
     PERFIL("Perfil", Icons.Default.AccountBox),
 }
 
@@ -353,6 +367,159 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                         Text("Navegar en Waze")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun PagosScreen(modifier: Modifier = Modifier) {
+
+    val context = LocalContext.current
+    var pagos by remember { mutableStateOf<List<PaymentSummaryResponse>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+        val token = prefs.getString("token", "") ?: ""
+
+        val apiService = Client.getClient(context).create(IAuthApi::class.java)
+        apiService.getMyPayments("Bearer $token").enqueue(object : retrofit2.Callback<List<PaymentSummaryResponse>> {
+            override fun onResponse(
+                call: retrofit2.Call<List<PaymentSummaryResponse>>,
+                response: retrofit2.Response<List<PaymentSummaryResponse>>
+            ) {
+                if (response.isSuccessful && response.body() != null) {
+                    pagos = response.body()!!
+                } else {
+                    error = "Error al cargar pagos"
+                }
+                isLoading = false
+            }
+
+            override fun onFailure(call: retrofit2.Call<List<PaymentSummaryResponse>>, t: Throwable) {
+                error = "Error de conexión"
+                isLoading = false
+            }
+        })
+    }
+
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Mis Pagos",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        when {
+            isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+            error != null -> {
+                Text(text = error!!, color = MaterialTheme.colorScheme.error)
+            }
+            pagos.isEmpty() -> {
+                Text("No tienes pagos pendientes")
+            }
+            else -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(pagos) { pago ->
+                        PagoCard(pago = pago)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PagoCard(pago: PaymentSummaryResponse) {
+
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (pago.status == "PENDIENTE")
+                        Icons.Default.Pending
+                    else
+                        Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = if (pago.status == "PENDIENTE")
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Pago por $${pago.amount}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${pago.fuelType} • ${pago.gallons} galones",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = pago.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = pago.status,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (pago.status == "PENDIENTE")
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        if (pago.status == "PENDIENTE") {
+            Button(
+                onClick = {
+                    Toast.makeText(context, "Procesando pago...", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp)
+            ) {
+                Text("Pagar")
             }
         }
     }
