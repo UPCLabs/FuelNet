@@ -19,10 +19,9 @@ public class Station {
 
     private String address;
 
-    @OneToMany(
-        mappedBy = "station",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FuelPrice> fuelPrices;
+
+    @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FuelTank> fuelTanks;
 }

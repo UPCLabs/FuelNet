@@ -22,8 +22,7 @@ public class StationController {
     @PostMapping
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
     public ResponseEntity<?> registerStation(
-        @RequestBody StationCreationRequestDto request
-    ) {
+            @RequestBody StationCreationRequestDto request) {
         Station saved = stationService.registerStation(request);
 
         return ResponseEntity.ok(saved);
@@ -35,15 +34,12 @@ public class StationController {
         List<Station> stations = stationService.getAllStations();
 
         List<StationsResponseDto> stationDtos = stations
-            .stream()
-            .map(station ->
-                new StationsResponseDto(
-                    station.getId(),
-                    station.getName(),
-                    station.getAddress()
-                )
-            )
-            .toList();
+                .stream()
+                .map(station -> new StationsResponseDto(
+                        station.getId(),
+                        station.getName(),
+                        station.getAddress()))
+                .toList();
 
         return ResponseEntity.ok(stationDtos);
     }
@@ -60,18 +56,15 @@ public class StationController {
         Station station = optionalStation.get();
 
         List<FuelPriceDto> fuels = station
-            .getFuelPrices()
-            .stream()
-            .map(fuel ->
-                new FuelPriceDto(fuel.getFuelType().name(), fuel.getPrice())
-            )
-            .toList();
+                .getFuelPrices()
+                .stream()
+                .map(fuel -> new FuelPriceDto(fuel.getFuelType().name(), fuel.getPrice()))
+                .toList();
 
         StationPriceResponseDto response = new StationPriceResponseDto(
-            station.getId(),
-            station.getName(),
-            fuels
-        );
+                station.getId(),
+                station.getName(),
+                fuels);
 
         return ResponseEntity.ok(response);
     }
