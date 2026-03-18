@@ -18,40 +18,22 @@ public class DataInit implements CommandLineRunner {
     @Override
     public void run(String... args) {
         String adminEmail = "admin@fuelnet.com";
-        String stationAdminEmail = "station@fuelnet.com";
 
         boolean exists = userRepository.existsByEmail(adminEmail);
 
         if (!exists) {
             User admin = User.builder()
-                    .name("admin")
-                    .email(adminEmail)
-                    .password(passwordEncoder.encode("admin"))
-                    .role(UserRole.PLATFORM_ADMIN)
-                    .build();
+                .name("admin")
+                .email(adminEmail)
+                .password(passwordEncoder.encode("admin"))
+                .role(UserRole.PLATFORM_ADMIN)
+                .build();
 
             userRepository.save(admin);
 
             System.out.println("✅ Platform Admin created successfully");
         } else {
             System.out.println("ℹ️ Platform Admin already exists");
-        }
-
-        boolean stationAdminExists = userRepository.existsByEmail(stationAdminEmail);
-
-        if (!stationAdminExists) {
-            User admin = User.builder()
-                    .name("station admin")
-                    .email(stationAdminEmail)
-                    .password(passwordEncoder.encode("station"))
-                    .role(UserRole.STATION_ADMIN)
-                    .build();
-
-            userRepository.save(admin);
-
-            System.out.println("✅ Station Admin created successfully");
-        } else {
-            System.out.println("ℹ️ Station Admin already exists");
         }
     }
 }
