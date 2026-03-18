@@ -49,6 +49,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Locale
+import androidx.core.content.edit
+import co.edu.unipiloto.fuelcontrol.api.IPaymentApi
+import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 data class Gasolinera(
     val id: Long,
@@ -133,12 +139,51 @@ fun FuelControlApp() {
                 }
 
                 AppDestinations.PERFIL -> {
-                    Text(
-                        text = "Perfil del usuario",
+                    PerfilScreen(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun PerfilScreen(modifier: Modifier = Modifier) {
+
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            text = "Perfil",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error
+            ),
+            onClick = {
+
+                val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+                prefs.edit { clear() }
+
+                val intent = Intent(context, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                context.startActivity(intent)
+            }
+        ) {
+            Text("Cerrar sesión")
         }
     }
 }
@@ -376,20 +421,18 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 fun PagosScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
-    var pagos by remember { mutableStateOf<List<PaymentSummaryResponse>>(emptyList()) }
+    var pagos by remember { mutableStateOf<List<PaymentResponse>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-        val token = prefs.getString("token", "") ?: ""
+    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+    val token = prefs.getString("token", "") ?: ""
+    val apiService = Client.getClient(context).create(IPaymentApi::class.java)
 
-        val apiService = Client.getClient(context).create(IAuthApi::class.java)
-        apiService.getMyPayments("Bearer $token").enqueue(object : retrofit2.Callback<List<PaymentSummaryResponse>> {
-            override fun onResponse(
-                call: retrofit2.Call<List<PaymentSummaryResponse>>,
-                response: retrofit2.Response<List<PaymentSummaryResponse>>
-            ) {
+    fun loadPayments() {
+        isLoading = true
+        apiService.getMyPayments("Bearer $token").enqueue(object : Callback<List<PaymentResponse>> {
+            override fun onResponse(call: Call<List<PaymentResponse>>, response: Response<List<PaymentResponse>>) {
                 if (response.isSuccessful && response.body() != null) {
                     pagos = response.body()!!
                 } else {
@@ -397,14 +440,14 @@ fun PagosScreen(modifier: Modifier = Modifier) {
                 }
                 isLoading = false
             }
-
-            override fun onFailure(call: retrofit2.Call<List<PaymentSummaryResponse>>, t: Throwable) {
+            override fun onFailure(call: Call<List<PaymentResponse>>, t: Throwable) {
                 error = "Error de conexión"
                 isLoading = false
             }
         })
     }
 
+    LaunchedEffect(Unit) { loadPayments() }
 
     Column(
         modifier = modifier
@@ -419,19 +462,16 @@ fun PagosScreen(modifier: Modifier = Modifier) {
         )
 
         when {
-            isLoading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-            }
-            error != null -> {
-                Text(text = error!!, color = MaterialTheme.colorScheme.error)
-            }
-            pagos.isEmpty() -> {
-                Text("No tienes pagos pendientes")
-            }
+            isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            error != null -> Text(text = error!!, color = MaterialTheme.colorScheme.error)
+            pagos.isEmpty() -> Text("No tienes pagos pendientes")
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(pagos) { pago ->
-                        PagoCard(pago = pago)
+                        PagoCard(
+                            pago = pago,
+                            onPagado = { loadPayments() }  // refresca la lista al pagar
+                        )
                     }
                 }
             }
@@ -440,16 +480,19 @@ fun PagosScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun PagoCard(pago: PaymentSummaryResponse) {
+fun PagoCard(pago: PaymentResponse, onPagado: () -> Unit) {
 
     val context = LocalContext.current
+    var isPaying by remember { mutableStateOf(false) }
+
+    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+    val token = prefs.getString("token", "") ?: ""
+    val apiService = Client.getClient(context).create(IPaymentApi::class.java)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
@@ -467,12 +510,12 @@ fun PagoCard(pago: PaymentSummaryResponse) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (pago.status == "PENDIENTE")
+                    imageVector = if (pago.status == "PENDING")
                         Icons.Default.Pending
                     else
                         Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (pago.status == "PENDIENTE")
+                    tint = if (pago.status == "PENDING")
                         MaterialTheme.colorScheme.error
                     else
                         MaterialTheme.colorScheme.primary,
@@ -494,14 +537,9 @@ fun PagoCard(pago: PaymentSummaryResponse) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = pago.message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
                     text = pago.status,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (pago.status == "PENDIENTE")
+                    color = if (pago.status == "PENDING")
                         MaterialTheme.colorScheme.error
                     else
                         MaterialTheme.colorScheme.primary
@@ -509,17 +547,45 @@ fun PagoCard(pago: PaymentSummaryResponse) {
             }
         }
 
-        if (pago.status == "PENDIENTE") {
+        if (pago.status == "PENDING") {
             Button(
                 onClick = {
-                    Toast.makeText(context, "Procesando pago...", Toast.LENGTH_SHORT).show()
+                    isPaying = true
+                    apiService.payPayment("Bearer $token", pago.id)
+                        .enqueue(object : Callback<PaymentResponse> {
+                            override fun onResponse(
+                                call: Call<PaymentResponse>,
+                                response: Response<PaymentResponse>
+                            ) {
+                                isPaying = false
+                                if (response.isSuccessful) {
+                                    Toast.makeText(context, "✅ Pago realizado", Toast.LENGTH_SHORT).show()
+                                    onPagado()
+                                } else {
+                                    Toast.makeText(context, "Error al procesar el pago", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            override fun onFailure(call: Call<PaymentResponse>, t: Throwable) {
+                                isPaying = false
+                                Toast.makeText(context, "Error de conexión", Toast.LENGTH_SHORT).show()
+                            }
+                        })
                 },
+                enabled = !isPaying,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp)
             ) {
-                Text("Pagar")
+                if (isPaying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Pagar")
+                }
             }
         }
     }

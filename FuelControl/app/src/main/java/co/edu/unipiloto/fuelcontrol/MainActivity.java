@@ -23,6 +23,28 @@ public class  MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        SharedPreferences prefs = getSharedPreferences("FuelControlPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+        String role = prefs.getString("role", null);
+
+        if (token != null && !isTokenExpired(token)) {
+            Intent intent;
+
+            if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
+                intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
+            } else {
+                intent = new Intent(MainActivity.this, DashboardActivity.class);
+            }
+
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        if (token != null && isTokenExpired(token)) {
+            prefs.edit().clear().apply();
+        }
+
         EditText etCorreo = findViewById(R.id.etCorreo);
         EditText etPassword = findViewById(R.id.etPassword);
         Button btnLogin = findViewById(R.id.btnLogin);
@@ -72,7 +94,7 @@ public class  MainActivity extends AppCompatActivity {
 
 
                                 Intent intent;
-                                if (role != null && role.equalsIgnoreCase("ADMIN")) {
+                                if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
                                     intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
                                 } else {
                                     intent = new Intent(MainActivity.this, DashboardActivity.class);
@@ -101,5 +123,28 @@ public class  MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private boolean isTokenExpired(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) return true;
+
+            String payload = parts[1];
+
+            byte[] decoded = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE);
+            String json = new String(decoded);
+
+            org.json.JSONObject obj = new org.json.JSONObject(json);
+            long exp = obj.getLong("exp");
+
+            long now = System.currentTimeMillis() / 1000;
+
+            return now > exp;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true;
+        }
     }
 }
