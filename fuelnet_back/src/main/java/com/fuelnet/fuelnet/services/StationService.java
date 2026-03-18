@@ -4,9 +4,12 @@ import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.enums.FuelType;
 import com.fuelnet.fuelnet.interfaces.IStationService;
 import com.fuelnet.fuelnet.models.FuelPrice;
+import com.fuelnet.fuelnet.models.FuelTank;
 import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.repositories.IFuelPriceRepository;
 import com.fuelnet.fuelnet.repositories.IStationRepository;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -31,23 +34,33 @@ public class StationService implements IStationService {
     @Override
     public Station registerStation(StationCreationRequestDto request) {
         Station station = Station.builder()
-            .name(request.getName())
-            .address(request.getAddress())
-            .build();
+                .name(request.getName())
+                .address(request.getAddress())
+                .build();
 
         List<FuelPrice> fuelPrices = request
-            .getFuels()
-            .stream()
-            .map(fuelDto ->
-                FuelPrice.builder()
-                    .fuelType(FuelType.valueOf(fuelDto.getType().toUpperCase()))
-                    .price(fuelDto.getPrice())
-                    .station(station)
-                    .build()
-            )
-            .toList();
+                .getFuels()
+                .stream()
+                .map(fuelDto -> FuelPrice.builder()
+                        .fuelType(FuelType.valueOf(fuelDto.getType().toUpperCase()))
+                        .price(fuelDto.getPrice())
+                        .station(station)
+                        .build())
+                .toList();
 
         station.setFuelPrices(fuelPrices);
+
+        List<FuelTank> tanks = request.getFuels()
+                .stream()
+                .map(fuelDto -> FuelTank.builder()
+                        .station(station)
+                        .fuelType(FuelType.valueOf(fuelDto.getType().toUpperCase()))
+                        .capacityGallons(new BigDecimal("5000"))
+                        .currentLevelGallons(BigDecimal.ZERO)
+                        .build())
+                .toList();
+
+        station.setFuelTanks(tanks);
 
         return stationRepository.save(station);
     }
