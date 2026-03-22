@@ -16,12 +16,34 @@ import co.edu.unipiloto.fuelcontrol.api.IAuthApi;
 import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
 
-public class MainActivity extends AppCompatActivity {
+public class  MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        SharedPreferences prefs = getSharedPreferences("FuelControlPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+        String role = prefs.getString("role", null);
+
+        if (token != null && !isTokenExpired(token)) {
+            Intent intent;
+
+            if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
+                intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
+            } else {
+                intent = new Intent(MainActivity.this, DashboardActivity.class);
+            }
+
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        if (token != null && isTokenExpired(token)) {
+            prefs.edit().clear().apply();
+        }
 
         EditText etCorreo = findViewById(R.id.etCorreo);
         EditText etPassword = findViewById(R.id.etPassword);
@@ -58,17 +80,25 @@ public class MainActivity extends AppCompatActivity {
                         public void onResponse(retrofit2.Call<AuthResponse> call,
                                                retrofit2.Response<AuthResponse> response) {
 
-                            if(response.isSuccessful() && response.body() != null){
+                            if (response.isSuccessful() && response.body() != null) {
 
                                 String token = response.body().getToken();
+                                String role = response.body().getRole();
+
 
                                 SharedPreferences prefs = getSharedPreferences("FuelControlPrefs", MODE_PRIVATE);
-                                SharedPreferences.Editor editor = prefs.edit();
-                                editor.putString("token", token);
-                                editor.apply();
+                                prefs.edit()
+                                        .putString("token", token)
+                                        .putString("role", role)
+                                        .apply();
 
 
-                                Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
+                                Intent intent;
+                                if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
+                                    intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
+                                } else {
+                                    intent = new Intent(MainActivity.this, DashboardActivity.class);
+                                }
                                 startActivity(intent);
                                 finish();
 
@@ -93,5 +123,28 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private boolean isTokenExpired(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) return true;
+
+            String payload = parts[1];
+
+            byte[] decoded = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE);
+            String json = new String(decoded);
+
+            org.json.JSONObject obj = new org.json.JSONObject(json);
+            long exp = obj.getLong("exp");
+
+            long now = System.currentTimeMillis() / 1000;
+
+            return now > exp;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true;
+        }
     }
 }

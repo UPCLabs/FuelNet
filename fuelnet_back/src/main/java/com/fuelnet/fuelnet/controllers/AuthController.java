@@ -1,12 +1,15 @@
 package com.fuelnet.fuelnet.controllers;
 
+import com.fuelnet.fuelnet.dto.CreateStationAdminRequest;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
 import com.fuelnet.fuelnet.interfaces.IAuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,10 +25,27 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody SignupRequestDto request) {
         try {
-            SignupResponseDto response = authService.register(request);
+            SignupResponseDto response = authService.registerClient(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/register-station-admin")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<?> registerStationAdmin(
+        @RequestBody CreateStationAdminRequest request
+    ) {
+        try {
+            SignupResponseDto response = authService.registerStationAdmin(
+                request
+            );
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                e.getMessage()
+            );
         }
     }
 

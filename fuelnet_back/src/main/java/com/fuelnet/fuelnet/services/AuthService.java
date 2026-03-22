@@ -1,12 +1,15 @@
 package com.fuelnet.fuelnet.services;
 
+import com.fuelnet.fuelnet.dto.CreateStationAdminRequest;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
 import com.fuelnet.fuelnet.enums.UserRole;
 import com.fuelnet.fuelnet.interfaces.IAuthService;
+import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.repositories.IStationRepository;
 import com.fuelnet.fuelnet.repositories.IUserRepository;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +21,13 @@ import org.springframework.stereotype.Service;
 public class AuthService implements IAuthService {
 
     private final IUserRepository userRepository;
+    private final IStationRepository stationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final Logger logger = Logger.getLogger("auth_service");
 
     @Override
-    public SignupResponseDto register(SignupRequestDto request) {
+    public SignupResponseDto registerClient(SignupRequestDto request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             logger.info("User is already registered");
             throw new RuntimeException("Email is already sign up");
@@ -56,6 +60,32 @@ public class AuthService implements IAuthService {
         logger.info("User login successful");
         String token = jwtService.generateToken(user);
 
-        return new LoginResponseDto(token);
+        return new LoginResponseDto(token, user.getRole().name());
+    }
+
+    @Override
+    public SignupResponseDto registerStationAdmin(
+        CreateStationAdminRequest request
+    ) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            logger.info("User is already registered");
+            throw new RuntimeException("Email is already sign up");
+        }
+
+        Station station = stationRepository
+            .findById(request.getStationId())
+            .orElseThrow(() -> new RuntimeException("Station not found"));
+
+        User user = User.builder()
+            .name(request.getName())
+            .email(request.getEmail())
+            .password(passwordEncoder.encode(request.getPassword()))
+            .role(UserRole.STATION_ADMIN)
+            .station(station)
+            .build();
+
+        userRepository.save(user);
+        logger.info("Station admin has been registered");
+        return new SignupResponseDto("User has been registered");
     }
 }
