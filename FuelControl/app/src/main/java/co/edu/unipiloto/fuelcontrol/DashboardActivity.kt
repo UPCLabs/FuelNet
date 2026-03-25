@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Pending
 import androidx.compose.material3.*
@@ -33,10 +34,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.net.toUri
 import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
+import co.edu.unipiloto.fuelcontrol.api.IPaymentApi
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
+import co.edu.unipiloto.fuelcontrol.models.AlertResponse
 import co.edu.unipiloto.fuelcontrol.models.PaymentSummaryResponse
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
@@ -47,15 +52,11 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.util.Locale
-import androidx.core.content.edit
-import co.edu.unipiloto.fuelcontrol.api.IPaymentApi
-import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
+import java.io.IOException
+import java.util.Locale
 data class Gasolinera(
     val id: Long,
     @SerializedName("name")
@@ -143,6 +144,9 @@ fun FuelControlApp() {
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
+                AppDestinations.NOTIFICACIONES -> {
+                    NotificacionesScreen(modifier = Modifier.padding(innerPadding))
+                }
             }
         }
     }
@@ -225,6 +229,8 @@ enum class AppDestinations(
     HOME("Inicio", Icons.Default.Home),
     MAPA("Mapa", Icons.Default.Map),
     PAGOS("Pagos", Icons.Default.Payment),
+
+    NOTIFICACIONES("Alertas", Icons.Default.Notifications),
     PERFIL("Perfil", Icons.Default.AccountBox),
 }
 
@@ -470,7 +476,7 @@ fun PagosScreen(modifier: Modifier = Modifier) {
                     items(pagos) { pago ->
                         PagoCard(
                             pago = pago,
-                            onPagado = { loadPayments() }  // refresca la lista al pagar
+                            onPagado = { loadPayments() }
                         )
                     }
                 }
@@ -585,6 +591,158 @@ fun PagoCard(pago: PaymentResponse, onPagado: () -> Unit) {
                     )
                 } else {
                     Text("Pagar")
+                }
+            }
+        }
+    }
+
+}
+@Composable
+fun NotificacionesScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+    val token = "Bearer " + (prefs.getString("token", "") ?: "")
+
+    var alertas by remember { mutableStateOf<List<AlertResponse>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun cargarAlertas() {
+        val api = Client.getClient(context).create(IAuthApi::class.java)
+        api.getAlerts(token).enqueue(object : Callback<List<AlertResponse>> {
+            override fun onResponse(call: Call<List<AlertResponse>>, response: Response<List<AlertResponse>>) {
+                isLoading = false
+                if (response.isSuccessful && response.body() != null) {
+                    alertas = response.body()!!
+                } else {
+                    error = "Error al cargar notificaciones"
+                }
+            }
+            override fun onFailure(call: Call<List<AlertResponse>>, t: Throwable) {
+                isLoading = false
+                error = "Error de conexión"
+            }
+        })
+    }
+
+    LaunchedEffect(Unit) { cargarAlertas() }
+
+    Column(
+        modifier = modifier.fillMaxSize().padding(16.dp)
+    ) {
+        Text(
+            text = "Notificaciones",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        when {
+            isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            error != null -> Text(text = error!!, color = MaterialTheme.colorScheme.error)
+            alertas.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No tienes notificaciones", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            else -> {
+
+                val noLeidas = alertas.filter { !it.isRead }
+                val leidas = alertas.filter { it.isRead }
+
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (noLeidas.isNotEmpty()) {
+                        item {
+                            Text("Nuevas", style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        items(noLeidas) { alerta ->
+                            NotificacionCard(alerta = alerta, onMarcarLeida = {
+                                val api = Client.getClient(context).create(IAuthApi::class.java)
+                                api.markAsRead(token, alerta.id).enqueue(object : Callback<Void> {
+                                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                        if (response.isSuccessful) cargarAlertas()
+                                    }
+                                    override fun onFailure(call: Call<Void>, t: Throwable) {}
+                                })
+                            })
+                        }
+                    }
+
+                    if (leidas.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Anteriores", style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        items(leidas) { alerta ->
+                            NotificacionCard(alerta = alerta, onMarcarLeida = null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificacionCard(alerta: AlertResponse, onMarcarLeida: (() -> Unit)?) {
+    val porcentaje = alerta.percentageAtAlert?.toFloat() ?: 0f
+    val color = when {
+        porcentaje <= 20f -> MaterialTheme.colorScheme.error
+        porcentaje <= 40f -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(if (onMarcarLeida != null) 3.dp else 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (onMarcarLeida != null)
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+            else
+                MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(
+                        color = if (onMarcarLeida != null) color else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
+                    )
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Alerta: ${alerta.fuelType}",
+                    fontWeight = if (onMarcarLeida != null) FontWeight.Bold else FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Nivel al ${porcentaje.toInt()}% — ${alerta.levelAtAlert} gal",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = alerta.createdAt ?: "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (onMarcarLeida != null) {
+                TextButton(onClick = onMarcarLeida) {
+                    Text("Leída", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
