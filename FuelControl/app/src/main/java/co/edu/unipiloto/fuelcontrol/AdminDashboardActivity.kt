@@ -375,6 +375,9 @@ fun NivelesTab() {
             override fun onResponse(call: Call<List<FuelTankResponse>>, response: Response<List<FuelTankResponse>>) {
                 if (response.isSuccessful && response.body() != null) {
                     tanques = response.body()!!
+                    tanques.filter { it.fillPercentage <= 15.0 }.forEach {
+                        NotificationHelper.sendFuelAlert(context, it.fuelType, it.fillPercentage)
+                    }
                 } else {
                     error = "Error al cargar niveles (${response.code()})"
                 }
