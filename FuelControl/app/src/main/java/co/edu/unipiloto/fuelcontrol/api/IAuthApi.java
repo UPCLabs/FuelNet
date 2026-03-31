@@ -12,6 +12,9 @@ import retrofit2.http.Header;
 import retrofit2.http.POST;
 import java.util.List;
 import co.edu.unipiloto.fuelcontrol.api.requests.CreatePaymentRequest;
+import co.edu.unipiloto.fuelcontrol.models.AlertResponse;
+import retrofit2.http.PATCH;
+import retrofit2.http.Path;
 
 public interface IAuthApi {
     @POST("/api/auth/register")
@@ -28,5 +31,16 @@ public interface IAuthApi {
     Call<PaymentSummaryResponse> createPayment(
             @Header("Authorization") String token,
             @Body CreatePaymentRequest request
+    );
+
+    @GET("/api/alerts")
+    Call<List<AlertResponse>> getAlerts(
+            @Header("Authorization") String token
+    );
+
+    @PATCH("/api/alerts/{id}/read")
+    Call<Void> markAsRead(
+            @Header("Authorization") String token,
+            @Path("id") Long id
     );
 }

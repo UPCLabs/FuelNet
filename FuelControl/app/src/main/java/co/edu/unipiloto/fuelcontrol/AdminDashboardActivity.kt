@@ -40,6 +40,7 @@ import co.edu.unipiloto.fuelcontrol.api.requests.FuelTankResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.InventoryMovementResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
+import androidx.compose.material.icons.filled.Notifications
 
 enum class AdminDestinations(
     val label: String,
@@ -47,6 +48,8 @@ enum class AdminDestinations(
 ) {
     FACTURAS("Facturas", Icons.Default.Description),
     INVENTARIO("Inventario", Icons.Default.Inventory),
+
+    ALERTAS("Alertas", Icons.Default.Notifications),
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
 
@@ -85,6 +88,7 @@ fun AdminDashboardScreen() {
             when (currentDestination) {
                 AdminDestinations.FACTURAS -> FacturasScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.INVENTARIO -> InventarioScreen(modifier = Modifier.padding(innerPadding))
+                AdminDestinations.ALERTAS -> NotificacionesScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.PERFIL -> PerfilAdminScreen(modifier = Modifier.padding(innerPadding))
             }
         }
@@ -371,6 +375,9 @@ fun NivelesTab() {
             override fun onResponse(call: Call<List<FuelTankResponse>>, response: Response<List<FuelTankResponse>>) {
                 if (response.isSuccessful && response.body() != null) {
                     tanques = response.body()!!
+                    tanques.filter { it.fillPercentage <= 15.0 }.forEach {
+                        NotificationHelper.sendFuelAlert(context, it.fuelType, it.fillPercentage)
+                    }
                 } else {
                     error = "Error al cargar niveles (${response.code()})"
                 }
