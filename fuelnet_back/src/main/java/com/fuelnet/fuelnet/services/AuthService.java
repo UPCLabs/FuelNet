@@ -11,6 +11,8 @@ import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.models.User;
 import com.fuelnet.fuelnet.repositories.IStationRepository;
 import com.fuelnet.fuelnet.repositories.IUserRepository;
+
+import java.time.LocalDate;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,11 +36,17 @@ public class AuthService implements IAuthService {
         }
 
         User user = User.builder()
-            .name(request.getName())
-            .email(request.getEmail())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(UserRole.USER)
-            .build();
+                .name(request.getName())
+                .email(request.getEmail())
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .address(request.getAddress())
+                .birthDate(request.getBirthday() != null
+                        ? LocalDate.parse(request.getBirthday())
+                        : null)
+                .role(UserRole.USER)
+                .gender(request.getGender())
+                .build();
 
         userRepository.save(user);
         logger.info("User has been register");
@@ -48,12 +56,10 @@ public class AuthService implements IAuthService {
     @Override
     public LoginResponseDto login(LoginRequestDto request) {
         User user = userRepository
-            .findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("User not found"));
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (
-            !passwordEncoder.matches(request.getPassword(), user.getPassword())
-        ) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Password incorrect");
         }
 
@@ -65,24 +71,23 @@ public class AuthService implements IAuthService {
 
     @Override
     public SignupResponseDto registerStationAdmin(
-        CreateStationAdminRequest request
-    ) {
+            CreateStationAdminRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             logger.info("User is already registered");
             throw new RuntimeException("Email is already sign up");
         }
 
         Station station = stationRepository
-            .findById(request.getStationId())
-            .orElseThrow(() -> new RuntimeException("Station not found"));
+                .findById(request.getStationId())
+                .orElseThrow(() -> new RuntimeException("Station not found"));
 
         User user = User.builder()
-            .name(request.getName())
-            .email(request.getEmail())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(UserRole.STATION_ADMIN)
-            .station(station)
-            .build();
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(UserRole.STATION_ADMIN)
+                .station(station)
+                .build();
 
         userRepository.save(user);
         logger.info("Station admin has been registered");

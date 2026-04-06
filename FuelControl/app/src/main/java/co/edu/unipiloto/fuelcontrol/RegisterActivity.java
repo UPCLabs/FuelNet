@@ -6,6 +6,7 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
 import android.app.DatePickerDialog;
+import android.util.Log;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -153,7 +154,6 @@ public class RegisterActivity extends AppCompatActivity {
         String fechaFormateada = anioNacimiento + "-" +
                 String.format("%02d", mesNacimiento) + "-" +
                 String.format("%02d", diaNacimiento);
-
         // Enviar al backend de mendiz
         IAuthApi apiService = Client.getClient(this).create(IAuthApi.class);
         RegisterRequest request = new RegisterRequest(
@@ -174,13 +174,25 @@ public class RegisterActivity extends AppCompatActivity {
                     Toast.makeText(RegisterActivity.this, response.body().getMessage(), Toast.LENGTH_LONG).show();
                     finish();
                 } else {
-                    Toast.makeText(RegisterActivity.this, "Error en el registro", Toast.LENGTH_LONG).show();
+                    // Leer el cuerpo del error
+                    String errorMsg = "Error " + response.code();
+                    try {
+                        if (response.errorBody() != null) {
+                            errorMsg += ": " + response.errorBody().string();
+                        }
+                    } catch (Exception e) {
+                        errorMsg += " (no se pudo leer el error)";
+                    }
+                    Log.e("REGISTER", errorMsg);
+                    Toast.makeText(RegisterActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
             public void onFailure(Call<RegisterResponse> call, Throwable t) {
-                Toast.makeText(RegisterActivity.this, "Error de conexión", Toast.LENGTH_LONG).show();
+                String errorMsg = "Error de conexión: " + t.getMessage();
+                Log.e("REGISTER", errorMsg, t);
+                Toast.makeText(RegisterActivity.this, errorMsg, Toast.LENGTH_LONG).show();
             }
         });
     }
