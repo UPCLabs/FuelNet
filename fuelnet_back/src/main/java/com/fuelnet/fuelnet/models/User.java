@@ -2,6 +2,7 @@ package com.fuelnet.fuelnet.models;
 
 import com.fuelnet.fuelnet.enums.UserRole;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -30,8 +31,20 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
+    @Column(unique = true)
+    private String username;
+
     @Column(nullable = false)
     private String password;
+
+    @Column
+    private String address;
+
+    @Column
+    private LocalDate birthDate;
+
+    @Column
+    private String gender;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
