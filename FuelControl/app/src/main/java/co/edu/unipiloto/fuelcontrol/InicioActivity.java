@@ -9,7 +9,10 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.content.Intent;
+import android.util.Log;
 import android.widget.Button;
+
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class InicioActivity extends AppCompatActivity {
 

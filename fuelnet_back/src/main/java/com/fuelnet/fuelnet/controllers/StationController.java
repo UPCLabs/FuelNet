@@ -4,12 +4,16 @@ import com.fuelnet.fuelnet.dto.FuelPriceDto;
 import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.dto.StationPriceResponseDto;
 import com.fuelnet.fuelnet.dto.StationsResponseDto;
+import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
 import com.fuelnet.fuelnet.interfaces.IStationService;
 import com.fuelnet.fuelnet.models.Station;
+import com.fuelnet.fuelnet.models.User;
+
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -67,5 +71,14 @@ public class StationController {
                 fuels);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/prices")
+    @PreAuthorize("hasAnyRole('STATION_ADMIN','PLATFORM_ADMIN')")
+    public String updatePrices(
+            @RequestBody List<UpdateFuelPriceRequest> request,
+            @AuthenticationPrincipal User user) {
+        stationService.updateFuelPrices(user.getStation().getId(), request, user);
+        return "Precios actualizados";
     }
 }

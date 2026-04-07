@@ -6,23 +6,54 @@ import androidx.core.content.ContextCompat;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.View;
+import android.util.Log;
 import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.Button;
 import android.content.Intent;
 import android.widget.TextView;
 
+import com.google.firebase.messaging.FirebaseMessaging;
+
 import java.util.concurrent.Executor;
 
 import co.edu.unipiloto.fuelcontrol.api.Client;
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi;
+import co.edu.unipiloto.fuelcontrol.api.INotificationApi;
+import co.edu.unipiloto.fuelcontrol.api.RegisterTokenRequest;
 import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
+import retrofit2.Call;
 
 public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
+
+    private void sendToken(String fcmToken) {
+
+        INotificationApi api = Client
+                .getClient(this)
+                .create(INotificationApi.class);
+
+        RegisterTokenRequest request = new RegisterTokenRequest(fcmToken);
+
+        api.registerToken(request).enqueue(new retrofit2.Callback<Void>() {
+
+            @Override
+            public void onResponse(Call<Void> call, retrofit2.Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Log.d("FCM", "Token registrado en backend");
+                } else {
+                    Log.e("FCM", "Error registrando token");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e("FCM", "Fallo conexión", t);
+            }
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +119,25 @@ public class MainActivity extends AppCompatActivity {
 
                         String token = response.body().getToken();
                         String role = response.body().getRole();
+
+                        FirebaseMessaging.getInstance().getToken()
+                                .addOnCompleteListener(task -> {
+                                    if (!task.isSuccessful()) {
+                                        Log.e("FCM", "Error obteniendo token", task.getException());
+                                        return;
+                                    }
+
+                                    String fcmToken = task.getResult();
+
+                                    Log.d("FCM", "TOKEN: " + fcmToken);
+
+                                    String savedFcm = prefs.getString("fcm_token", null);
+
+                                    if (!fcmToken.equals(savedFcm)) {
+                                        sendToken(fcmToken);
+                                        prefs.edit().putString("fcm_token", fcmToken).apply();
+                                    }
+                                });
 
                         prefs.edit()
                                 .putString("token", token)

@@ -1,13 +1,16 @@
 package com.fuelnet.fuelnet.services;
 
 import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
+import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
 import com.fuelnet.fuelnet.enums.FuelType;
 import com.fuelnet.fuelnet.interfaces.IStationService;
 import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.FuelTank;
 import com.fuelnet.fuelnet.models.Station;
+import com.fuelnet.fuelnet.models.User;
 import com.fuelnet.fuelnet.repositories.IFuelPriceRepository;
 import com.fuelnet.fuelnet.repositories.IStationRepository;
+import com.google.firebase.messaging.FirebaseMessagingException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,6 +24,7 @@ public class StationService implements IStationService {
 
     private final IStationRepository stationRepository;
     private final IFuelPriceRepository fuelPriceRepository;
+    private final NotificationService notificationService;
 
     public Optional<Station> getStationById(Long id) {
         return stationRepository.findById(id);
@@ -68,5 +72,36 @@ public class StationService implements IStationService {
     @Override
     public List<Station> getAllStations() {
         return stationRepository.findAll();
+    }
+
+    public void updateFuelPrices(Long stationId, List<UpdateFuelPriceRequest> request, User admin) {
+
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> new RuntimeException("Estación no encontrada"));
+
+        List<FuelPrice> prices = fuelPriceRepository.findByStationId(stationId);
+
+        for (UpdateFuelPriceRequest r : request) {
+
+            FuelType type = FuelType.valueOf(r.getFuelType().toUpperCase());
+
+            prices.stream()
+                    .filter(p -> p.getFuelType() == type)
+                    .findFirst()
+                    .ifPresent(p -> p.setPrice(r.getPrice()));
+        }
+
+        fuelPriceRepository.saveAll(prices);
+
+        String topic = "station_" + stationId;
+
+        try {
+            notificationService.sendToTopic(
+                    topic,
+                    "⛽ Cambio de precios",
+                    "La estación " + station.getName() + " actualizó sus precios");
+        } catch (FirebaseMessagingException e) {
+            e.printStackTrace();
+        }
     }
 }

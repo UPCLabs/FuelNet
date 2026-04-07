@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "3718933112",
+    "project_id": "fuelnet-67f49",
+    "storage_bucket": "fuelnet-67f49.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:3718933112:android:7518b92d4b442fa9b0db8d",
+        "android_client_info": {
+          "package_name": "co.edu.unipiloto.fuelcontrol"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBt5vVwXt7BsHnKs5STZ9cuKrs0O_skv8E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

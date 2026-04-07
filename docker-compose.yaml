@@ -27,10 +27,18 @@ services:
         condition: service_healthy
     ports:
       - "3015:3015"
+
+    env_file:
+      - ./fuelnet_back/.env
+
+    volumes:
+      - ./fuelnet_back/firebase-key.json:/app/firebase-key.json
+
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fuelnetdb
       SPRING_DATASOURCE_USERNAME: fuelnet
       SPRING_DATASOURCE_PASSWORD: fuelnet123
+
     restart: unless-stopped
 
 volumes:
