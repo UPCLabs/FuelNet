@@ -6,10 +6,13 @@ import com.fuelnet.fuelnet.dto.StationPriceResponseDto;
 import com.fuelnet.fuelnet.dto.StationsResponseDto;
 import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
 import com.fuelnet.fuelnet.interfaces.IStationService;
+import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.models.User;
 
 import java.util.List;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -73,12 +76,19 @@ public class StationController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/prices")
+    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    public List<FuelPrice> getMyPrices(
+            @AuthenticationPrincipal User user) {
+        return stationService.getFuelPriceByStation(user.getStation().getId());
+    }
+
     @PutMapping("/prices")
-    @PreAuthorize("hasAnyRole('STATION_ADMIN','PLATFORM_ADMIN')")
-    public String updatePrices(
+    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    public Map<String, String> updatePrices(
             @RequestBody List<UpdateFuelPriceRequest> request,
             @AuthenticationPrincipal User user) {
         stationService.updateFuelPrices(user.getStation().getId(), request, user);
-        return "Precios actualizados";
+        return Map.of("message", "Precios actualizados");
     }
 }
