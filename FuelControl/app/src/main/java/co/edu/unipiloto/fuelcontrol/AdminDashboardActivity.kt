@@ -41,6 +41,8 @@ import co.edu.unipiloto.fuelcontrol.api.requests.InventoryMovementResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.AttachMoney
+import co.edu.unipiloto.fuelcontrol.api.IStationApi
 
 enum class AdminDestinations(
     val label: String,
@@ -50,6 +52,9 @@ enum class AdminDestinations(
     INVENTARIO("Inventario", Icons.Default.Inventory),
 
     ALERTAS("Alertas", Icons.Default.Notifications),
+
+    PRECIOS("Precios", Icons.Default.AttachMoney),
+
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
 
@@ -89,6 +94,7 @@ fun AdminDashboardScreen() {
                 AdminDestinations.FACTURAS -> FacturasScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.INVENTARIO -> InventarioScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.ALERTAS -> NotificacionesScreen(modifier = Modifier.padding(innerPadding))
+                AdminDestinations.PRECIOS -> PreciosScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.PERFIL -> PerfilAdminScreen(modifier = Modifier.padding(innerPadding))
             }
         }
@@ -359,6 +365,111 @@ fun InventarioScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PreciosScreen(modifier: Modifier = Modifier) {
+
+    val context = LocalContext.current
+    val token = "Bearer " + (
+            context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+                .getString("token", "") ?: ""
+            )
+
+    val api = Client.getClient(context).create(IStationApi::class.java)
+
+    var precio by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf("CORRIENTE") }
+    var expanded by remember { mutableStateOf(false) }
+    var estado by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+
+    val combustibles = listOf("CORRIENTE", "EXTRA", "DIESEL")
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+
+        Text("Actualizar precios", style = MaterialTheme.typography.titleLarge)
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = tipo,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Tipo de combustible") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                combustibles.forEach {
+                    DropdownMenuItem(
+                        text = { Text(it) },
+                        onClick = {
+                            tipo = it
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = precio,
+            onValueChange = { precio = it },
+            label = { Text("Nuevo precio") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (estado.isNotEmpty()) {
+            Text(
+                estado,
+                color = if (estado.startsWith("✓"))
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+
+        Button(
+            onClick = {
+                if (precio.isEmpty()) {
+                    estado = "Ingresa un precio"
+                    return@Button
+                }
+
+                loading = true
+
+                //aqui va el endpoint del back
+
+                Toast.makeText(context, "Precio actualizado", Toast.LENGTH_SHORT).show()
+
+                estado = " Precio actualizado"
+                loading = false
+                precio = ""
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp))
+            } else {
+                Text("Actualizar precio")
+            }
+        }
+    }
+}
+
 @Composable
 fun NivelesTab() {
     val context = LocalContext.current
@@ -376,7 +487,7 @@ fun NivelesTab() {
                 if (response.isSuccessful && response.body() != null) {
                     tanques = response.body()!!
                     tanques.filter { it.fillPercentage <= 15.0 }.forEach {
-                        NotificationHelper.sendFuelAlert(context, it.fuelType, it.fillPercentage)
+
                     }
                 } else {
                     error = "Error al cargar niveles (${response.code()})"

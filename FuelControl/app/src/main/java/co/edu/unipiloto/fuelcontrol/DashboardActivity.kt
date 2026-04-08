@@ -66,7 +66,11 @@ data class Gasolinera(
     val latLng: LatLng?,
     var precio: String = "Cargando..."
 )
-
+data class LocalPriceAlert(
+    val stationName: String,
+    val message: String,
+    val date: String
+)
 class DashboardActivity : ComponentActivity() {
 
     private val locationPermissionRequest =
@@ -257,6 +261,30 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+
+
+    fun guardarSeguida(stationId: Long) {
+        val actuales = prefs.getStringSet("seguidas", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+        actuales.add(stationId.toString())
+        prefs.edit().putStringSet("seguidas", actuales).apply()
+    }
+
+
+    fun obtenerSeguidas(): Set<String> {
+        return prefs.getStringSet("seguidas", emptySet()) ?: emptySet()
+    }
+
+
+    fun guardarPrecios(stationId: Long, precios: String) {
+        prefs.edit().putString("precio_$stationId", precios).apply()
+    }
+
+
+    fun obtenerPrecios(stationId: Long): String? {
+        return prefs.getString("precio_$stationId", null)
+    }
+
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
     }
@@ -272,6 +300,7 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         position = CameraPosition.fromLatLngZoom(bogota, 12f)
     }
 
+    //esto mendiz chequea los cambios automaticamente
     LaunchedEffect(Unit) {
 
         try {
@@ -290,6 +319,43 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
             gasolineras = gasolinerasConCoords
             isLoading = false
+
+           //aqui mendiz se ven los precios de las que seguiste
+            val seguidas = obtenerSeguidas()
+
+            gasolinerasConCoords.forEach { gasolinera ->
+                if (seguidas.contains(gasolinera.id.toString())) {
+
+                    try {
+                        val response = apiService.getStationPrices(gasolinera.id)
+
+                        val precioNuevo = response.fuels.joinToString("\n") {
+                            "${it.type}: $${it.price}"
+                        }
+
+                        val precioAnterior = obtenerPrecios(gasolinera.id)
+
+                        if (precioAnterior != null && precioAnterior != precioNuevo) {
+
+                            val mensaje = "Cambio de precio en ${gasolinera.nombre}"
+
+                            Toast.makeText(context, " $mensaje", Toast.LENGTH_LONG).show()
+
+                            // aqui se guardaria la alerta
+                            val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+                            val actuales = prefs.getStringSet("price_alerts", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+
+                            val nuevaAlerta = "$mensaje|${System.currentTimeMillis()}"
+                            actuales.add(nuevaAlerta)
+
+                            prefs.edit().putStringSet("price_alerts", actuales).apply()
+                        }
+
+                        guardarPrecios(gasolinera.id, precioNuevo)
+
+                    } catch (_: Exception) {}
+                }
+            }
 
         } catch (e: Exception) {
             Toast.makeText(context, "Error al cargar estaciones", Toast.LENGTH_LONG).show()
@@ -346,9 +412,7 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                             scope.launch {
 
                                 try {
-
-                                    val response =
-                                        apiService.getStationPrices(gasolinera.id)
+                                    val response = apiService.getStationPrices(gasolinera.id)
 
                                     val precioFormateado =
                                         response.fuels.joinToString("\n") {
@@ -400,10 +464,22 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
+                            guardarSeguida(seleccionada.id)
+                            Toast.makeText(context, " Siguiendo estación", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Seguir estación")
+                    }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
                             val lat = seleccionada.latLng?.latitude ?: 0.0
                             val lng = seleccionada.latLng?.longitude ?: 0.0
 
@@ -411,18 +487,28 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                                 "https://waze.com/ul?ll=$lat,$lng&navigate=yes".toUri()
 
                             val intent = Intent(Intent.ACTION_VIEW, wazeUri)
-
                             context.startActivity(intent)
                         }
                     ) {
                         Text("Navegar en Waze")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            guardarSeguida(seleccionada.id)
+
+                            Toast.makeText(context, " Gasolinera seguida", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Seguir esta gasolinera")
                     }
                 }
             }
         }
     }
 }
-
 @Composable
 fun PagosScreen(modifier: Modifier = Modifier) {
 
@@ -604,6 +690,7 @@ fun NotificacionesScreen(modifier: Modifier = Modifier) {
     val token = "Bearer " + (prefs.getString("token", "") ?: "")
 
     var alertas by remember { mutableStateOf<List<AlertResponse>>(emptyList()) }
+    var alertasLocales by remember { mutableStateOf<List<LocalPriceAlert>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -623,6 +710,17 @@ fun NotificacionesScreen(modifier: Modifier = Modifier) {
                 error = "Error de conexión"
             }
         })
+        val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+        val guardadas = prefs.getStringSet("price_alerts", emptySet()) ?: emptySet()
+
+        alertasLocales = guardadas.map {
+            val partes = it.split("|")
+            LocalPriceAlert(
+                stationName = partes[0],
+                message = partes[0],
+                date = partes.getOrNull(1) ?: ""
+            )
+        }
     }
 
     LaunchedEffect(Unit) { cargarAlertas() }
@@ -656,6 +754,34 @@ fun NotificacionesScreen(modifier: Modifier = Modifier) {
                             Text("Nuevas", style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        if (alertasLocales.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Cambios de precio",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            items(alertasLocales) { alerta ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    elevation = CardDefaults.cardElevation(2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = alerta.message,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Detectado recientemente",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
                         items(noLeidas) { alerta ->
                             NotificacionCard(alerta = alerta, onMarcarLeida = {
