@@ -47,6 +47,7 @@ import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.annotations.SerializedName
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
@@ -149,7 +150,7 @@ fun FuelControlApp() {
                     )
                 }
                 AppDestinations.NOTIFICACIONES -> {
-                    NotificacionesScreen(modifier = Modifier.padding(innerPadding))
+//                    NotificacionesScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -263,27 +264,28 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
     val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
 
-
-    fun guardarSeguida(stationId: Long) {
-        val actuales = prefs.getStringSet("seguidas", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        actuales.add(stationId.toString())
-        prefs.edit().putStringSet("seguidas", actuales).apply()
+    fun getFollowedStations(): MutableSet<String> {
+        return prefs.getStringSet("followed_stations", mutableSetOf())?.toMutableSet()
+            ?: mutableSetOf()
     }
 
-
-    fun obtenerSeguidas(): Set<String> {
-        return prefs.getStringSet("seguidas", emptySet()) ?: emptySet()
+    fun isFollowing(stationId: Long): Boolean {
+        return getFollowedStations().contains(stationId.toString())
     }
 
-
-    fun guardarPrecios(stationId: Long, precios: String) {
-        prefs.edit().putString("precio_$stationId", precios).apply()
+    fun followStation(stationId: Long) {
+        val set = getFollowedStations()
+        set.add(stationId.toString())
+        prefs.edit().putStringSet("followed_stations", set).apply()
     }
 
-
-    fun obtenerPrecios(stationId: Long): String? {
-        return prefs.getString("precio_$stationId", null)
+    fun unfollowStation(stationId: Long) {
+        val set = getFollowedStations()
+        set.remove(stationId.toString())
+        prefs.edit().putStringSet("followed_stations", set).apply()
     }
+
+    var refreshFollowState by remember { mutableStateOf(0) }
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
@@ -300,7 +302,6 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         position = CameraPosition.fromLatLngZoom(bogota, 12f)
     }
 
-    //esto mendiz chequea los cambios automaticamente
     LaunchedEffect(Unit) {
 
         try {
@@ -319,43 +320,6 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
             gasolineras = gasolinerasConCoords
             isLoading = false
-
-           //aqui mendiz se ven los precios de las que seguiste
-            val seguidas = obtenerSeguidas()
-
-            gasolinerasConCoords.forEach { gasolinera ->
-                if (seguidas.contains(gasolinera.id.toString())) {
-
-                    try {
-                        val response = apiService.getStationPrices(gasolinera.id)
-
-                        val precioNuevo = response.fuels.joinToString("\n") {
-                            "${it.type}: $${it.price}"
-                        }
-
-                        val precioAnterior = obtenerPrecios(gasolinera.id)
-
-                        if (precioAnterior != null && precioAnterior != precioNuevo) {
-
-                            val mensaje = "Cambio de precio en ${gasolinera.nombre}"
-
-                            Toast.makeText(context, " $mensaje", Toast.LENGTH_LONG).show()
-
-                            // aqui se guardaria la alerta
-                            val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-                            val actuales = prefs.getStringSet("price_alerts", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-
-                            val nuevaAlerta = "$mensaje|${System.currentTimeMillis()}"
-                            actuales.add(nuevaAlerta)
-
-                            prefs.edit().putStringSet("price_alerts", actuales).apply()
-                        }
-
-                        guardarPrecios(gasolinera.id, precioNuevo)
-
-                    } catch (_: Exception) {}
-                }
-            }
 
         } catch (e: Exception) {
             Toast.makeText(context, "Error al cargar estaciones", Toast.LENGTH_LONG).show()
@@ -416,7 +380,7 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
                                     val precioFormateado =
                                         response.fuels.joinToString("\n") {
-                                            "${it.type}: $${it.price}"
+                                            "${it.fuelType}: $${it.price}"
                                         }
 
                                     gasolineraSeleccionada =
@@ -439,6 +403,10 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         }
 
         gasolineraSeleccionada?.let { seleccionada ->
+
+            // 👇 fuerza recomposición del botón
+            val siguiendo = isFollowing(seleccionada.id)
+            refreshFollowState
 
             Card(
                 modifier = Modifier
@@ -464,15 +432,63 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
-                            guardarSeguida(seleccionada.id)
-                            Toast.makeText(context, " Siguiendo estación", Toast.LENGTH_SHORT).show()
+
+                            val topic = "station_${seleccionada.id}"
+
+                            if (!siguiendo) {
+
+                                FirebaseMessaging.getInstance()
+                                    .subscribeToTopic(topic)
+                                    .addOnCompleteListener { task ->
+                                        if (task.isSuccessful) {
+
+                                            followStation(seleccionada.id)
+                                            refreshFollowState++
+
+                                            Toast.makeText(
+                                                context,
+                                                "Siguiendo ${seleccionada.nombre}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Error al seguir",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+
+                            } else {
+
+                                FirebaseMessaging.getInstance()
+                                    .unsubscribeFromTopic(topic)
+                                    .addOnCompleteListener { task ->
+                                        if (task.isSuccessful) {
+
+                                            unfollowStation(seleccionada.id)
+                                            refreshFollowState++
+
+                                            Toast.makeText(
+                                                context,
+                                                "Dejaste de seguir",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Error al dejar de seguir",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                            }
                         }
                     ) {
-                        Text("Seguir estación")
+                        Text(if (siguiendo) "Dejar de seguir" else "Seguir estación")
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -491,18 +507,6 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                         }
                     ) {
                         Text("Navegar en Waze")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            guardarSeguida(seleccionada.id)
-
-                            Toast.makeText(context, " Gasolinera seguida", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Text("Seguir esta gasolinera")
                     }
                 }
             }

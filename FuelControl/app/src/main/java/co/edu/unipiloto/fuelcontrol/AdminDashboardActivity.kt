@@ -3,6 +3,7 @@ package co.edu.unipiloto.fuelcontrol
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,7 +43,11 @@ import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material3.HorizontalDivider
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.api.UpdateFuelPriceRequest
+import co.edu.unipiloto.fuelcontrol.models.FuelPriceDto
+import kotlinx.coroutines.launch
 
 enum class AdminDestinations(
     val label: String,
@@ -370,12 +375,8 @@ fun InventarioScreen(modifier: Modifier = Modifier) {
 fun PreciosScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
-    val token = "Bearer " + (
-            context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-                .getString("token", "") ?: ""
-            )
-
     val api = Client.getClient(context).create(IStationApi::class.java)
+    val scope = rememberCoroutineScope()
 
     var precio by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("CORRIENTE") }
@@ -383,13 +384,25 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
     var estado by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
 
+    var preciosActuales by remember { mutableStateOf<List<FuelPriceDto>>(emptyList()) }
+    var loadingPrecios by remember { mutableStateOf(true) }
+
     val combustibles = listOf("CORRIENTE", "EXTRA", "DIESEL")
+
+    LaunchedEffect(Unit) {
+        try {
+            preciosActuales = api.getMyPrices()
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
+        }
+        loadingPrecios = false
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
         Text("Actualizar precios", style = MaterialTheme.typography.titleLarge)
@@ -398,6 +411,7 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
         ) {
+            val fillMaxWidth = Modifier.fillMaxWidth()
             OutlinedTextField(
                 value = tipo,
                 onValueChange = {},
@@ -406,7 +420,7 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = fillMaxWidth.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
             )
 
             ExposedDropdownMenu(
@@ -444,20 +458,31 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                if (precio.isEmpty()) {
-                    estado = "Ingresa un precio"
+                val precioDouble = precio.toDoubleOrNull()
+
+                if (precioDouble == null) {
+                    estado = "Precio inválido"
                     return@Button
                 }
 
-                loading = true
+                scope.launch {
+                    loading = true
+                    try {
+                        val request = listOf(UpdateFuelPriceRequest(tipo, precioDouble))
+                        api.updatePrices(request)
 
-                //aqui va el endpoint del back
+                        estado = "✓ Precio actualizado"
+                        precio = ""
 
-                Toast.makeText(context, "Precio actualizado", Toast.LENGTH_SHORT).show()
+                        preciosActuales = api.getMyPrices()
 
-                estado = " Precio actualizado"
-                loading = false
-                precio = ""
+                    } catch (e: Exception) {
+                        Log.e("Admin", "Error actualizando precio", e)
+                        estado = "✗ Error: ${e.message}"
+                    } finally {
+                        loading = false
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -465,6 +490,27 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp))
             } else {
                 Text("Actualizar precio")
+            }
+        }
+        HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+        Text("Precios actuales", style = MaterialTheme.typography.titleMedium)
+
+        if (loadingPrecios) {
+            CircularProgressIndicator()
+        } else {
+            preciosActuales.forEach {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(it.fuelType)
+                        Text("$${it.price}")
+                    }
+                }
             }
         }
     }
