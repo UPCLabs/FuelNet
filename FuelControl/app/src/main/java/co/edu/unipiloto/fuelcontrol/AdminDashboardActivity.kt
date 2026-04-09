@@ -393,7 +393,7 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
         try {
             preciosActuales = api.getMyPrices()
         } catch (e: Exception) {
-            Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
+           Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
         }
         loadingPrecios = false
     }
@@ -421,6 +421,7 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded)
                 },
                 modifier = fillMaxWidth.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+
             )
 
             ExposedDropdownMenu(
@@ -500,15 +501,15 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
             CircularProgressIndicator()
         } else {
             preciosActuales.forEach {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(it.fuelType)
-                        Text("$${it.price}")
+                        Text(it.fuelType ?: "—")
+                        Text(it.price?.let { p -> "$$p" } ?: "—")
                     }
                 }
             }

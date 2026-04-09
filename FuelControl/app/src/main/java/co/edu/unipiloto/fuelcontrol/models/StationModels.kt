@@ -15,7 +15,7 @@ data class StationPriceResponseDto(
 )
 
 data class FuelPriceDto(
-    @SerializedName("type")
+    @SerializedName(value = "type", alternate = ["fuelType"])
     val fuelType: String,
     val price: Double
 )
