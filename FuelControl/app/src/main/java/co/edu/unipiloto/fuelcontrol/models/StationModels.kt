@@ -1,5 +1,7 @@
 package co.edu.unipiloto.fuelcontrol.models
 
+import com.google.gson.annotations.SerializedName
+
 data class StationDto(
     val id: Long,
     val name: String,
@@ -13,6 +15,7 @@ data class StationPriceResponseDto(
 )
 
 data class FuelPriceDto(
+    @SerializedName("type")
     val fuelType: String,
     val price: Double
 )

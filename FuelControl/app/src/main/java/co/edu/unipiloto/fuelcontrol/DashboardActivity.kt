@@ -276,13 +276,13 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
     fun followStation(stationId: Long) {
         val set = getFollowedStations()
         set.add(stationId.toString())
-        prefs.edit().putStringSet("followed_stations", set).apply()
+        prefs.edit { putStringSet("followed_stations", set) }
     }
 
     fun unfollowStation(stationId: Long) {
         val set = getFollowedStations()
         set.remove(stationId.toString())
-        prefs.edit().putStringSet("followed_stations", set).apply()
+        prefs.edit { putStringSet("followed_stations", set) }
     }
 
     var refreshFollowState by remember { mutableStateOf(0) }
