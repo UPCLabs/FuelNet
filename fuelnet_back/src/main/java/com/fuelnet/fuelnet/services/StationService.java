@@ -3,7 +3,6 @@ package com.fuelnet.fuelnet.services;
 import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
 import com.fuelnet.fuelnet.enums.FuelType;
-import com.fuelnet.fuelnet.interfaces.IStationService;
 import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.FuelTank;
 import com.fuelnet.fuelnet.models.Station;
@@ -20,7 +19,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class StationService implements IStationService {
+public class StationService {
 
     private final IStationRepository stationRepository;
     private final IFuelPriceRepository fuelPriceRepository;
@@ -30,12 +29,10 @@ public class StationService implements IStationService {
         return stationRepository.findById(id);
     }
 
-    @Override
     public List<FuelPrice> getFuelPriceByStation(Long stationId) {
         return fuelPriceRepository.findByStationId(stationId);
     }
 
-    @Override
     public Station registerStation(StationCreationRequestDto request) {
         Station station = Station.builder()
                 .name(request.getName())
@@ -69,7 +66,6 @@ public class StationService implements IStationService {
         return stationRepository.save(station);
     }
 
-    @Override
     public List<Station> getAllStations() {
         return stationRepository.findAll();
     }

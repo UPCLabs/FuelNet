@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="28dp"
+    android:gravity="center"
+    android:background="@drawable/bg_dialog_rounded">
+
+    <!-- Ícono usando vector built-in de Android -->
+    <ImageView
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:src="@android:drawable/ic_dialog_email"
+        android:layout_marginBottom="16dp"
+        app:tint="#4F46E5" />
+
+    <!-- Título -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¡Registro exitoso!"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A2E"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Mensaje principal -->
+    <TextView
+        android:id="@+id/tvDialogTitulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tu cuenta fue creada correctamente."
+        android:textSize="15sp"
+        android:textColor="#444444"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Mensaje de correo -->
+    <TextView
+        android:id="@+id/tvDialogMensaje"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Por favor revisa tu correo electrónico para verificar tu cuenta antes de iniciar sesión."
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Botón con app:cornerRadius en vez de android:cornerRadius -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDialogAceptar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Entendido"
+        android:backgroundTint="#4F46E5"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        app:cornerRadius="12dp" />
+
+</LinearLayout>

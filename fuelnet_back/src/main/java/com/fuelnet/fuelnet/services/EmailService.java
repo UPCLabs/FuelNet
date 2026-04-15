@@ -31,7 +31,7 @@ public class EmailService {
             helper.setSubject(
                     "⚠️ Alerta de combustible crítico — " +
                             alert.getTank().getFuelType());
-            helper.setText(buildEmailHtml(alert), true);
+            helper.setText(buildAlertInventoryHtml(alert), true);
 
             mailSender.send(message);
         } catch (MessagingException e) {
@@ -60,7 +60,107 @@ public class EmailService {
         }
     }
 
-    private String buildEmailHtml(FuelAlert alert) {
+    public void sendSuccessUserVerification(String toEmail) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    true,
+                    "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fuelnet | Cuenta Verificada");
+            helper.setText(buildUserActivationEmail(toEmail), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendPlatformAdminReviewMail() {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    true,
+                    "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(fromEmail);
+            helper.setSubject("Fuelnet | Cuenta necesita revision");
+            helper.setText(buildAdminMessageToSeeReviews(), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendWaitingForRevision(String toEmail) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    true,
+                    "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fuelnet | Cuenta necesita revision");
+            helper.setText(buildAdminReviewEmail(toEmail), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendApproveByAdmin(String toEmail) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    true,
+                    "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fuelnet | Cuenta Aprovada");
+            helper.setText(buildApprovedAccountEmail(toEmail), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendRejectedByAdmin(String toEmail, String reason) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message,
+                    true,
+                    "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Fuelnet | Cuenta Rechazada");
+            helper.setText(buildRejectedAccountEmail(toEmail, reason), true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String buildAlertInventoryHtml(FuelAlert alert) {
         return """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
                     <h2 style="color: #e53935;">⚠️ Nivel crítico de combustible</h2>
@@ -106,7 +206,7 @@ public class EmailService {
                         Haz clic en el siguiente enlace para activar tu cuenta:
                     </p>
 
-                    <a href="http://192.168.1.15:3015/api/auth/activate?token=%s"
+                    <a href="http://10.2.2.2:3015/api/auth/activate?token=%s"
                        style="display:inline-block;padding:10px 15px;background:#1e88e5;color:white;text-decoration:none;border-radius:5px;">
                        Activar cuenta
                     </a>
@@ -117,6 +217,38 @@ public class EmailService {
                 </div>
                 """
                 .formatted(name, token);
+    }
+
+    private String buildUserActivationEmail(String name) {
+        return """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+                    <h2 style="color: #1e88e5;">📩 Verifica tu correo</h2>
+
+                    <p>Hola <strong>%s</strong>,</p>
+
+                    <p>Tu cuenta ha sido verificafa correctamente</p>
+
+                    <p style="margin-top: 20px;">
+                        Ya puedes iniciar sesion
+                    </p>
+
+                </div>
+                """
+                .formatted(name);
+    }
+
+    private String buildAdminMessageToSeeReviews() {
+        return """
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+                    <h2 style="color: #fb8c00;">⏳ Cuenta en revisión</h2>
+
+                    <p>Hola <strong>PLATFORM_ADMIN</strong>,</p>
+
+                    <p>Una nueva cuenta de administrador quiere ser registrada</p>
+
+                    <p>Entra a la aplicacion para revisarla.</p>
+                </div>
+                """;
     }
 
     private String buildAdminReviewEmail(String name) {
@@ -141,7 +273,7 @@ public class EmailService {
                 """.formatted(name);
     }
 
-    private String buildApprovedAccountEmail(String name, String email, String tempPassword) {
+    private String buildApprovedAccountEmail(String email) {
         return """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
                     <h2 style="color: #43a047;">✅ Cuenta aprobada</h2>
@@ -158,22 +290,12 @@ public class EmailService {
                             <td style="padding: 8px; border: 1px solid #ddd;">%s</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Contraseña temporal</strong></td>
-                            <td style="padding: 8px; border: 1px solid #ddd;">%s</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Contraseña que tu pusiste</strong></td>
                         </tr>
                     </table>
-
-                    <p style="margin-top: 16px;">
-                        Al iniciar sesión deberás cambiar tu contraseña obligatoriamente.
-                    </p>
-
-                    <a href="https://tu-dominio.com/login"
-                       style="display:inline-block;padding:10px 15px;background:#43a047;color:white;text-decoration:none;border-radius:5px;">
-                       Iniciar sesión
-                    </a>
                 </div>
                 """
-                .formatted(name, email, tempPassword);
+                .formatted(email, email);
     }
 
     private String buildRejectedAccountEmail(String name, String reason) {

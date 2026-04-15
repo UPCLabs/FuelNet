@@ -17,17 +17,17 @@ public class DataInit implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String adminEmail = "admin@fuelnet.com";
+        String adminEmail = "santi.mendoza@santimendoza.com";
 
         boolean exists = userRepository.existsByEmail(adminEmail);
 
         if (!exists) {
             User admin = User.builder()
-                .name("admin")
-                .email(adminEmail)
-                .password(passwordEncoder.encode("admin"))
-                .role(UserRole.PLATFORM_ADMIN)
-                .build();
+                    .name("admin")
+                    .email(adminEmail)
+                    .password(passwordEncoder.encode("admin"))
+                    .role(UserRole.PLATFORM_ADMIN)
+                    .build();
 
             userRepository.save(admin);
 

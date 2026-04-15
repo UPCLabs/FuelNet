@@ -45,6 +45,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".CreateStationActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".InicioActivity"
             android:exported="true">
             <intent-filter>

@@ -1,5 +1,6 @@
 package co.edu.unipiloto.fuelcontrol.api
 
+import co.edu.unipiloto.fuelcontrol.api.requests.CreateStationRequest
 import co.edu.unipiloto.fuelcontrol.models.FuelPriceDto
 import co.edu.unipiloto.fuelcontrol.models.StationDto
 import co.edu.unipiloto.fuelcontrol.models.StationPriceResponseDto
@@ -7,6 +8,7 @@ import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
@@ -25,6 +27,9 @@ interface IStationApi {
 
     @GET("/api/station/prices")
     suspend fun getMyPrices(): List<FuelPriceDto>
+
+    @POST("/api/station")
+    fun createStation(@Body request: CreateStationRequest): Call<Void>
 
     @PUT("/api/station/prices")
     suspend fun updatePrices(
