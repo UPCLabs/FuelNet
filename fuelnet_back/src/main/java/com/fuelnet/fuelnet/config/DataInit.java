@@ -17,7 +17,7 @@ public class DataInit implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String adminEmail = "santi.mendoza@santimendoza.com";
+        String adminEmail = "santiago.mendoza@santimendoza.com";
 
         boolean exists = userRepository.existsByEmail(adminEmail);
 

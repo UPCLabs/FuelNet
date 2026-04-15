@@ -21,6 +21,14 @@ public class Client {
 
             Interceptor authInterceptor = chain -> {
                 Request original = chain.request();
+                String url = original.url().encodedPath();
+
+                if (
+                        url.equals("/api/auth/login") ||
+                                url.equals("/api/auth/register")
+                ) {
+                    return chain.proceed(original);
+                }
 
                 SharedPreferences prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE);
                 String token = prefs.getString("token", "");

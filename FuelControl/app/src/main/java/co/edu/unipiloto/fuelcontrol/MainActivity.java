@@ -240,14 +240,26 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void irAlDashboard(String role) {
-        if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
-            verificarEstacion(role);
-        } else {
-            Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
-            startActivity(intent);
-            finish();
+    private Class<?> resolverDashboard(String role) {
+        switch (role.toUpperCase()) {
+            case "PLATFORM_ADMIN": return SuperAdminDashboardActivity.class;
+            case "STATION_ADMIN":  return null;
+            default:               return DashboardActivity.class;
         }
+    }
+
+    private void irAlDashboard(String role) {
+        if (role == null) return;
+
+        if (role.equalsIgnoreCase("STATION_ADMIN")) {
+            verificarEstacion(role);
+            return;
+        }
+
+        Class<?> destino = resolverDashboard(role);
+        Intent intent = new Intent(MainActivity.this, destino);
+        startActivity(intent);
+        finish();
     }
 
     private boolean isTokenExpired(String token) {

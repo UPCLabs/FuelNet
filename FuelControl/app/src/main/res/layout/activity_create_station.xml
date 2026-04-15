@@ -2,8 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F0F2F8">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,7 +13,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:background="#4F46E5"
+            android:background="?attr/colorPrimary"
             android:orientation="vertical"
             android:gravity="bottom"
             android:padding="28dp">
@@ -24,7 +23,7 @@
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_menu_mylocation"
                 android:layout_marginBottom="12dp"
-                app:tint="#FFFFFF" />
+                app:tint="?attr/colorOnPrimary" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -32,18 +31,17 @@
                 android:text="Nueva Estación"
                 android:textSize="28sp"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF" />
+                android:textColor="?attr/colorOnPrimary" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Registra tu punto de venta de combustible"
                 android:textSize="14sp"
-                android:textColor="#C7C4F7" />
+                android:textColor="?attr/colorOnPrimary" />
 
         </LinearLayout>
 
-        <!-- Contenido -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,7 +73,7 @@
                         <View
                             android:layout_width="4dp"
                             android:layout_height="22dp"
-                            android:background="#4F46E5"
+                            android:background="?attr/colorPrimary"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
@@ -84,7 +82,7 @@
                             android:text="Información general"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#1A1A2E" />
+                            android:textColor="?attr/colorOnBackground" />
 
                     </LinearLayout>
 
@@ -98,7 +96,7 @@
                         app:boxCornerRadiusTopEnd="10dp"
                         app:boxCornerRadiusBottomStart="10dp"
                         app:boxCornerRadiusBottomEnd="10dp"
-                        app:boxStrokeColor="#4F46E5"
+                        app:boxStrokeColor="?attr/colorPrimary"
                         android:layout_marginBottom="14dp">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -119,7 +117,7 @@
                         app:boxCornerRadiusTopEnd="10dp"
                         app:boxCornerRadiusBottomStart="10dp"
                         app:boxCornerRadiusBottomEnd="10dp"
-                        app:boxStrokeColor="#4F46E5">
+                        app:boxStrokeColor="?attr/colorPrimary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etDireccionEstacion"
@@ -157,7 +155,7 @@
                         <View
                             android:layout_width="4dp"
                             android:layout_height="22dp"
-                            android:background="#4F46E5"
+                            android:background="?attr/colorPrimary"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
@@ -166,7 +164,7 @@
                             android:text="Tipos de combustible"
                             android:textSize="16sp"
                             android:textStyle="bold"
-                            android:textColor="#1A1A2E" />
+                            android:textColor="?attr/colorOnBackground" />
 
                     </LinearLayout>
 
@@ -175,7 +173,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:background="#F8F7FF"
                         android:padding="14dp"
                         android:layout_marginBottom="12dp">
 
@@ -185,9 +182,9 @@
                             android:layout_height="wrap_content"
                             android:text="Corriente"
                             android:textSize="15sp"
-                            android:textColor="#1A1A2E"
+                            android:textColor="?attr/colorOnBackground"
                             android:textStyle="bold"
-                            android:buttonTint="#4F46E5" />
+                            android:buttonTint="?attr/colorPrimary" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/tilPrecioCorriente"
@@ -199,7 +196,7 @@
                             app:boxCornerRadiusTopEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
                             app:boxCornerRadiusBottomEnd="10dp"
-                            app:boxStrokeColor="#4F46E5"
+                            app:boxStrokeColor="?attr/colorPrimary"
                             android:layout_marginTop="10dp"
                             android:visibility="gone">
 
@@ -218,7 +215,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:background="#F8F7FF"
                         android:padding="14dp"
                         android:layout_marginBottom="12dp">
 
@@ -228,9 +224,9 @@
                             android:layout_height="wrap_content"
                             android:text="Extra"
                             android:textSize="15sp"
-                            android:textColor="#1A1A2E"
+                            android:textColor="?attr/colorOnBackground"
                             android:textStyle="bold"
-                            android:buttonTint="#4F46E5" />
+                            android:buttonTint="?attr/colorPrimary" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/tilPrecioExtra"
@@ -242,7 +238,7 @@
                             app:boxCornerRadiusTopEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
                             app:boxCornerRadiusBottomEnd="10dp"
-                            app:boxStrokeColor="#4F46E5"
+                            app:boxStrokeColor="?attr/colorPrimary"
                             android:layout_marginTop="10dp"
                             android:visibility="gone">
 
@@ -261,7 +257,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:background="#F8F7FF"
                         android:padding="14dp">
 
                         <CheckBox
@@ -270,9 +265,9 @@
                             android:layout_height="wrap_content"
                             android:text="Diesel"
                             android:textSize="15sp"
-                            android:textColor="#1A1A2E"
+                            android:textColor="?attr/colorOnBackground"
                             android:textStyle="bold"
-                            android:buttonTint="#4F46E5" />
+                            android:buttonTint="?attr/colorPrimary" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/tilPrecioDiesel"
@@ -284,7 +279,7 @@
                             app:boxCornerRadiusTopEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
                             app:boxCornerRadiusBottomEnd="10dp"
-                            app:boxStrokeColor="#4F46E5"
+                            app:boxStrokeColor="?attr/colorPrimary"
                             android:layout_marginTop="10dp"
                             android:visibility="gone">
 
@@ -309,8 +304,8 @@
                 android:text="Crear estación"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#4F46E5"
+                android:textColor="?attr/colorOnPrimary"
+                android:backgroundTint="?attr/colorPrimary"
                 app:cornerRadius="14dp"
                 android:layout_marginBottom="32dp" />
 
