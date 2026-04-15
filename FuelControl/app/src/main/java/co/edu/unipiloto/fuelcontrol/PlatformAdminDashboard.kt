@@ -31,7 +31,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import co.edu.unipiloto.fuelcontrol.api.IPendingUserApi
 
-// ── Navegación ────────────────────────────────────────────────────────────────
 
 enum class SuperAdminDestinations(
     val label: String,
@@ -42,7 +41,6 @@ enum class SuperAdminDestinations(
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
 
-// ── Activity ──────────────────────────────────────────────────────────────────
 
 class SuperAdminDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +54,6 @@ class SuperAdminDashboardActivity : ComponentActivity() {
     }
 }
 
-// ── Scaffold principal ────────────────────────────────────────────────────────
 
 @Composable
 fun SuperAdminDashboardScreen() {
@@ -87,7 +84,6 @@ fun SuperAdminDashboardScreen() {
     }
 }
 
-// ── Pestaña: INICIO ───────────────────────────────────────────────────────────
 
 @Composable
 fun SuperAdminHomeScreen(modifier: Modifier = Modifier) {
@@ -133,7 +129,6 @@ fun SuperAdminHomeScreen(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Pestaña: SOLICITUDES ──────────────────────────────────────────────────────
 
 @Composable
 fun SolicitudesScreen(modifier: Modifier = Modifier) {
@@ -232,7 +227,6 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    // ── Contenido principal ────────────────────────────────────────────────────
     when {
         isLoading -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -294,12 +288,11 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Card de solicitud ─────────────────────────────────────────────────────────
 
 @Composable
 fun SolicitudCard(
     user: PendingUserDto,
-    isResolving: Boolean,          // ← nuevo parámetro
+    isResolving: Boolean,
     onVerDetalle: () -> Unit,
     onAprobar: () -> Unit,
     onRechazar: () -> Unit
@@ -323,7 +316,6 @@ fun SolicitudCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                // Badge rol o spinner si está procesando
                 if (isResolving) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 } else {
@@ -344,7 +336,6 @@ fun SolicitudCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // Mensaje de estado mientras procesa
             if (isResolving) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -389,7 +380,6 @@ fun SolicitudCard(
     }
 }
 
-// ── Fila de detalle en el dialog ──────────────────────────────────────────────
 
 @Composable
 fun DetalleRow(label: String, value: String) {
@@ -412,7 +402,6 @@ fun DetalleRow(label: String, value: String) {
     }
 }
 
-// ── Pestaña: PERFIL ───────────────────────────────────────────────────────────
 
 @Composable
 fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
@@ -429,7 +418,6 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // Avatar
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -491,7 +479,6 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
     }
 }
 
-// ── DTO del usuario pendiente ─────────────────────────────────────────────────
 
 data class PendingUserDto(
     val id: Long,
