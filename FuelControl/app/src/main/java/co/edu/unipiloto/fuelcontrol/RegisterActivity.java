@@ -53,7 +53,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         ArrayAdapter<String> adapterRol = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[]{"Comprador", "Estación de servicio", "Distribuidor"});
+                new String[]{"Usuario", "Administrador de estacion"});
         adapterRol.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerRol.setAdapter(adapterRol);
 
@@ -154,12 +154,12 @@ public class RegisterActivity extends AppCompatActivity {
         String fechaFormateada = anioNacimiento + "-" +
                 String.format("%02d", mesNacimiento) + "-" +
                 String.format("%02d", diaNacimiento);
-        // Enviar al backend de mendiz
+
         IAuthApi apiService = Client.getClient(this).create(IAuthApi.class);
         RegisterRequest request = new RegisterRequest(
                 nombre,
-                correo,
                 usuario,
+                correo,
                 password,
                 direccion,
                 fechaFormateada,
