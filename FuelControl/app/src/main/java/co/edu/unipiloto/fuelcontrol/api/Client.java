@@ -13,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class Client {
 
-    private static final String BASE_URL = "http://192.168.1.10:3015/";
+    private static final String BASE_URL = "http://10.2.2.2:3015/";
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient(Context context) {
@@ -21,6 +21,14 @@ public class Client {
 
             Interceptor authInterceptor = chain -> {
                 Request original = chain.request();
+                String url = original.url().encodedPath();
+
+                if (
+                        url.equals("/api/auth/login") ||
+                                url.equals("/api/auth/register")
+                ) {
+                    return chain.proceed(original);
+                }
 
                 SharedPreferences prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE);
                 String token = prefs.getString("token", "");
@@ -36,6 +44,9 @@ public class Client {
             };
 
             OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                    .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .addInterceptor(authInterceptor)
                     .build();
 

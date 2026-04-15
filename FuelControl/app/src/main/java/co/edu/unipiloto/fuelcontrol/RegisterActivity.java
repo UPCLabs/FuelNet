@@ -7,7 +7,10 @@ import android.location.Geocoder;
 import android.os.Bundle;
 import android.app.DatePickerDialog;
 import android.util.Log;
+import android.view.View;
 import android.widget.*;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -53,7 +56,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         ArrayAdapter<String> adapterRol = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[]{"Comprador", "Estación de servicio", "Distribuidor"});
+                new String[]{"Usuario", "Administrador de estacion"});
         adapterRol.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerRol.setAdapter(adapterRol);
 
@@ -99,6 +102,26 @@ public class RegisterActivity extends AppCompatActivity {
         });
     }
 
+
+    private void mostrarDialogoExito() {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_registro_exitoso, null);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        dialogView.findViewById(R.id.btnDialogAceptar).setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+
+        dialog.show();
+    }
     private void validarYRegistrar() {
         String nombre = etNombre.getText().toString().trim();
         String correo = etCorreo.getText().toString().trim();
@@ -154,12 +177,12 @@ public class RegisterActivity extends AppCompatActivity {
         String fechaFormateada = anioNacimiento + "-" +
                 String.format("%02d", mesNacimiento) + "-" +
                 String.format("%02d", diaNacimiento);
-        // Enviar al backend de mendiz
+
         IAuthApi apiService = Client.getClient(this).create(IAuthApi.class);
         RegisterRequest request = new RegisterRequest(
                 nombre,
-                correo,
                 usuario,
+                correo,
                 password,
                 direccion,
                 fechaFormateada,
@@ -171,8 +194,7 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<RegisterResponse> call, retrofit2.Response<RegisterResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Toast.makeText(RegisterActivity.this, response.body().getMessage(), Toast.LENGTH_LONG).show();
-                    finish();
+                    mostrarDialogoExito();
                 } else {
                     // Leer el cuerpo del error
                     String errorMsg = "Error " + response.code();

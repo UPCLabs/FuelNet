@@ -2,6 +2,7 @@ package co.edu.unipiloto.fuelcontrol.api;
 
 import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.RegisterRequest;
 import co.edu.unipiloto.fuelcontrol.api.requests.RegisterResponse;
 import co.edu.unipiloto.fuelcontrol.models.PaymentSummaryResponse;
@@ -23,7 +24,7 @@ public interface IAuthApi {
     @POST("/api/auth/login")
     Call<AuthResponse> login(@Body LoginRequest request);
 
-    @GET("api/payments/my-payments")
+    @GET("/api/payments/my-payments")
     Call<List<PaymentSummaryResponse>> getMyPayments(
             @Header("Authorization") String token
     );
@@ -37,6 +38,9 @@ public interface IAuthApi {
     Call<List<AlertResponse>> getAlerts(
             @Header("Authorization") String token
     );
+
+    @GET("/api/auth/me")
+    Call<MeResponse> getMe();
 
     @PATCH("/api/alerts/{id}/read")
     Call<Void> markAsRead(
