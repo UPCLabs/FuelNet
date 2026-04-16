@@ -37,7 +37,11 @@ public class UserController {
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@AuthenticationPrincipal User user,
             @RequestBody Map<String, String> request) {
-        authService.change_password(user, request.get("password"));
+        boolean status = authService.change_password(user, request.get("oldPassword"), request.get("newPassword"));
+
+        if (!status) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Passwords don't match"));
+        }
 
         return ResponseEntity.ok(Map.of("message", "Password has been changed sucessfully"));
     }

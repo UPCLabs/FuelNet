@@ -169,6 +169,41 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void validarSesionYEntrar(String role) {
+
+        IAuthApi api = Client.getClient(this).create(IAuthApi.class);
+
+        api.getMe().enqueue(new retrofit2.Callback<MeResponse>() {
+
+            @Override
+            public void onResponse(Call<MeResponse> call, retrofit2.Response<MeResponse> response) {
+
+                if (response.isSuccessful() && response.body() != null) {
+                    irAlDashboard(role);
+
+                } else {
+                    manejarSesionInvalida();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MeResponse> call, Throwable t) {
+                Toast.makeText(MainActivity.this,
+                        "Error de conexión",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void manejarSesionInvalida() {
+
+        prefs.edit().clear().apply();
+
+        Toast.makeText(this,
+                "Sesión expirada, inicia sesión nuevamente",
+                Toast.LENGTH_LONG).show();
+    }
+
     private void autenticarBiometrico(String role) {
 
         Executor executor = ContextCompat.getMainExecutor(this);
@@ -179,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                         super.onAuthenticationSucceeded(result);
-                        irAlDashboard(role);
+                        validarSesionYEntrar(role);
                     }
 
                     @Override

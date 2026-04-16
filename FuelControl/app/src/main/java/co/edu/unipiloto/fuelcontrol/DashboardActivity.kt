@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,9 +41,10 @@ import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.api.IPaymentApi
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.models.AlertResponse
-import co.edu.unipiloto.fuelcontrol.models.PaymentSummaryResponse
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
@@ -162,26 +164,46 @@ fun PerfilScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
 
-    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-
-    var usuarioActual by remember {
-        mutableStateOf(prefs.getString("username", "") ?: "")
-    }
-
-    var usuarioEditado by remember { mutableStateOf(usuarioActual) }
+    var user by remember { mutableStateOf<MeResponse?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var mensaje by remember { mutableStateOf("") }
 
     var passwordActual by remember { mutableStateOf("") }
     var nuevaPassword by remember { mutableStateOf("") }
     var confirmarPassword by remember { mutableStateOf("") }
 
-    var mensaje by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+
+        val api = Client.getClient(context).create(IAuthApi::class.java)
+
+        api.getMe().enqueue(object : retrofit2.Callback<MeResponse> {
+
+            override fun onResponse(
+                call: retrofit2.Call<MeResponse>,
+                response: retrofit2.Response<MeResponse>
+            ) {
+                if (response.isSuccessful) {
+                    user = response.body()
+                } else {
+                    mensaje = "Error: ${response.code()}"
+                }
+                loading = false
+            }
+
+            override fun onFailure(call: retrofit2.Call<MeResponse>, t: Throwable) {
+                Log.e("PERFIL_ERROR", "Fallo", t)
+                mensaje = "Error de conexión"
+                loading = false
+            }
+        })
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
 
         Text(
@@ -191,23 +213,26 @@ fun PerfilScreen(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        //La idea es que muestre el actual 
-        Text(
-            text = "Usuario actual: $usuarioActual",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        if (loading) {
+            CircularProgressIndicator()
+        } else {
+            user?.let {
 
-        Spacer(modifier = Modifier.height(8.dp))
+                Text("Nombre: ${it.name}")
+                Text("Email: ${it.email}")
+                Text("Usuario: ${it.username}")
+                Text("Dirección: ${it.address ?: "No disponible"}")
+                Text("Fecha nacimiento: ${it.birthDate ?: "No disponible"}")
+                Text("Género: ${it.gender ?: "No disponible"}")
+                Text("Rol: ${it.role}")
 
-        // Cambiar usuario
-        OutlinedTextField(
-            value = usuarioEditado,
-            onValueChange = { usuarioEditado = it },
-            label = { Text("Editar usuario") },
-            modifier = Modifier.fillMaxWidth()
-        )
+                if (it.stationId != null) {
+                    Text("Estación ID: ${it.stationId}")
+                }
+            }
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "Cambiar contraseña",
@@ -253,36 +278,49 @@ fun PerfilScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth(),
             onClick = {
 
-                if (usuarioEditado == usuarioActual && nuevaPassword.isEmpty()) {
-                    mensaje = "No hay cambios"
+                if (passwordActual.isEmpty()) {
+                    mensaje = "Ingresa la contraseña actual"
                     return@Button
                 }
 
-                // Validación contraseña
-                if (nuevaPassword.isNotEmpty()) {
-
-                    if (passwordActual.isEmpty()) {
-                        mensaje = "Ingresa la contraseña actual"
-                        return@Button
-                    }
-
-                    if (nuevaPassword != confirmarPassword) {
-                        mensaje = "Las contraseñas no coinciden"
-                        return@Button
-                    }
+                if (nuevaPassword != confirmarPassword) {
+                    mensaje = "Las contraseñas no coinciden"
+                    return@Button
                 }
 
-            //Aqui para que conectes mendiz
+                Thread {
+                    try {
+                        val api = Client.getClient(context).create(IAuthApi::class.java)
 
-                mensaje = "Datos actualizados"
+                        val response = api.changePassword(
+                            ChangePasswordRequest(
+                                passwordActual,
+                                nuevaPassword
+                            )
+                        ).execute()
+
+                        if (response.isSuccessful) {
+                            mensaje = "✓ Contraseña actualizada"
+
+                            passwordActual = ""
+                            nuevaPassword = ""
+                            confirmarPassword = ""
+
+                        } else {
+                            mensaje = "Error al actualizar contraseña"
+                        }
+
+                    } catch (e: Exception) {
+                        mensaje = "Error de conexión"
+                    }
+                }.start()
             }
         ) {
-            Text("Guardar cambios")
+            Text("Cambiar contraseña")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // boton de cerrar sesion
         Button(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
@@ -290,7 +328,8 @@ fun PerfilScreen(modifier: Modifier = Modifier) {
             ),
             onClick = {
 
-                prefs.edit { clear() }
+                val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+                prefs.edit {clear()}
 
                 val intent = Intent(context, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -834,7 +873,9 @@ fun NotificacionesScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { cargarAlertas() }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
         Text(
             text = "Notificaciones",
@@ -941,7 +982,9 @@ fun NotificacionCard(alerta: AlertResponse, onMarcarLeida: (() -> Unit)?) {
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 

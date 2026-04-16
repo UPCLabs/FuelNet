@@ -3,6 +3,7 @@ package co.edu.unipiloto.fuelcontrol
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,11 +27,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import co.edu.unipiloto.fuelcontrol.api.AdminAceptationRequest
 import co.edu.unipiloto.fuelcontrol.api.Client
+import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import co.edu.unipiloto.fuelcontrol.api.IPendingUserApi
+import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 
 
 enum class SuperAdminDestinations(
@@ -228,16 +233,22 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
     }
 
     when {
-        isLoading -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+        isLoading -> Box(Modifier
+            .fillMaxSize()
+            .then(modifier), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
 
-        error != null -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+        error != null -> Box(Modifier
+            .fillMaxSize()
+            .then(modifier), contentAlignment = Alignment.Center) {
             Text(error!!, color = MaterialTheme.colorScheme.error)
         }
 
         solicitudes.isEmpty() -> Box(
-            Modifier.fillMaxSize().then(modifier),
+            Modifier
+                .fillMaxSize()
+                .then(modifier),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -407,91 +418,83 @@ fun DetalleRow(label: String, value: String) {
 fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
 
-    var adminName by remember {
-        mutableStateOf(prefs.getString("userName", "Administrador") ?: "Administrador")
-    }
-
-    val adminEmail = prefs.getString("userEmail", "") ?: ""
-
-    var usuarioEditado by remember { mutableStateOf(adminName) }
+    var user by remember { mutableStateOf<MeResponse?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var mensaje by remember { mutableStateOf("") }
 
     var passwordActual by remember { mutableStateOf("") }
     var nuevaPassword by remember { mutableStateOf("") }
     var confirmarPassword by remember { mutableStateOf("") }
 
-    var mensaje by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+
+        val api = Client.getClient(context).create(IAuthApi::class.java)
+
+        api.getMe().enqueue(object : retrofit2.Callback<MeResponse> {
+
+            override fun onResponse(
+                call: retrofit2.Call<MeResponse>,
+                response: retrofit2.Response<MeResponse>
+            ) {
+                if (response.isSuccessful) {
+                    user = response.body()
+                } else {
+                    mensaje = "Error: ${response.code()}"
+                }
+                loading = false
+            }
+
+            override fun onFailure(call: retrofit2.Call<MeResponse>, t: Throwable) {
+                Log.e("PERFIL_ERROR", "Fallo", t)
+                mensaje = "Error de conexión"
+                loading = false
+            }
+        })
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
 
+        Text(
+            text = "Perfil",
+            style = MaterialTheme.typography.headlineMedium
+        )
 
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(88.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = adminName.firstOrNull()?.uppercase() ?: "A",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (loading) {
+            CircularProgressIndicator()
+        } else {
+            user?.let {
+
+                Text("Nombre: ${it.name}")
+                Text("Email: ${it.email}")
+                Text("Usuario: ${it.username}")
+                Text("Dirección: ${it.address ?: "No disponible"}")
+                Text("Fecha nacimiento: ${it.birthDate ?: "No disponible"}")
+                Text("Género: ${it.gender ?: "No disponible"}")
+                Text("Rol: ${it.role}")
+
+                if (it.stationId != null) {
+                    Text("Estación ID: ${it.stationId}")
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        Text(adminName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
-        if (adminEmail.isNotEmpty()) {
-            Text(
-                adminEmail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Surface(
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = MaterialTheme.shapes.small
-        ) {
-            Text(
-                text = "Super Administrador",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-
-        // Editar usuario
-        OutlinedTextField(
-            value = usuarioEditado,
-            onValueChange = { usuarioEditado = it },
-            label = { Text("Editar usuario") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "Cambiar contraseña",
             style = MaterialTheme.typography.titleMedium
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = passwordActual,
@@ -514,7 +517,7 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (mensaje.isNotEmpty()) {
             Text(
@@ -526,47 +529,65 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
             )
         }
 
-        //guardar
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
 
-                if (usuarioEditado == adminName && nuevaPassword.isEmpty()) {
-                    mensaje = "No hay cambios"
+                if (passwordActual.isEmpty()) {
+                    mensaje = "Ingresa la contraseña actual"
                     return@Button
                 }
 
-                if (nuevaPassword.isNotEmpty()) {
-
-                    if (passwordActual.isEmpty()) {
-                        mensaje = "Ingresa la contraseña actual"
-                        return@Button
-                    }
-
-                    if (nuevaPassword != confirmarPassword) {
-                        mensaje = "Las contraseñas no coinciden"
-                        return@Button
-                    }
+                if (nuevaPassword != confirmarPassword) {
+                    mensaje = "Las contraseñas no coinciden"
+                    return@Button
                 }
 
-                // aqui back
+                Thread {
+                    try {
+                        val api = Client.getClient(context).create(IAuthApi::class.java)
 
-                mensaje = "Datos actualizados"
+                        val response = api.changePassword(
+                            ChangePasswordRequest(
+                                passwordActual,
+                                nuevaPassword
+                            )
+                        ).execute()
+
+                        println(response.code());
+
+                        if (response.isSuccessful) {
+                            mensaje = "✓ Contraseña actualizada"
+
+                            passwordActual = ""
+                            nuevaPassword = ""
+                            confirmarPassword = ""
+
+                        } else {
+                            mensaje = "Error al actualizar contraseña"
+                        }
+
+                    } catch (e: Exception) {
+                        mensaje = "Error de conexión"
+                    }
+                }.start()
             }
         ) {
-            Text("Guardar cambios")
+            Text("Cambiar contraseña")
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        //cerrar sesion
         Button(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error
             ),
             onClick = {
-                prefs.edit { clear() }
+
+                val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+                prefs.edit {clear()}
+
                 val intent = Intent(context, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 context.startActivity(intent)

@@ -53,8 +53,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-        User dbUser = userRepository.findById(user.getId()).orElseThrow();
-        UserMeDto dto = toDto(dbUser);
+        UserMeDto dto = toDto(user);
 
         return ResponseEntity.ok(dto);
     }
