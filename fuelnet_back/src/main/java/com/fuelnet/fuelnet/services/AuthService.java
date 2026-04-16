@@ -109,12 +109,16 @@ public class AuthService {
         return true;
     }
 
-    public boolean change_password(User user, String newPassword) {
+    public boolean change_password(User user, String oldPassword, String newPassword) {
         try {
+            if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+                return false;
+            }
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
             return true;
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return false;
         }
     }

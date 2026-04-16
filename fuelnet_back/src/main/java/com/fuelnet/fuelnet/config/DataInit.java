@@ -4,6 +4,9 @@ import com.fuelnet.fuelnet.enums.UserRole;
 import com.fuelnet.fuelnet.models.User;
 import com.fuelnet.fuelnet.repositories.IUserRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,6 +27,10 @@ public class DataInit implements CommandLineRunner {
         if (!exists) {
             User admin = User.builder()
                     .name("admin")
+                    .username("admin")
+                    .address("Adminlandia")
+                    .birthDate(LocalDate.parse("2006-01-20"))
+                    .gender("Masculino")
                     .email(adminEmail)
                     .password(passwordEncoder.encode("admin"))
                     .role(UserRole.PLATFORM_ADMIN)

@@ -44,8 +44,11 @@ import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.setValue
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
 import co.edu.unipiloto.fuelcontrol.api.UpdateFuelPriceRequest
+import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 import co.edu.unipiloto.fuelcontrol.models.FuelPriceDto
 import kotlinx.coroutines.launch
 
@@ -111,18 +114,160 @@ fun PerfilAdminScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
 
+    var user by remember { mutableStateOf<MeResponse?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var mensaje by remember { mutableStateOf("") }
+
+    var passwordActual by remember { mutableStateOf("") }
+    var nuevaPassword by remember { mutableStateOf("") }
+    var confirmarPassword by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+
+        val api = Client.getClient(context).create(IAuthApi::class.java)
+
+        api.getMe().enqueue(object : retrofit2.Callback<MeResponse> {
+
+            override fun onResponse(
+                call: retrofit2.Call<MeResponse>,
+                response: retrofit2.Response<MeResponse>
+            ) {
+                if (response.isSuccessful) {
+                    user = response.body()
+                } else {
+                    mensaje = "Error: ${response.code()}"
+                }
+                loading = false
+            }
+
+            override fun onFailure(call: retrofit2.Call<MeResponse>, t: Throwable) {
+                Log.e("PERFIL_ERROR", "Fallo", t)
+                mensaje = "Error de conexión"
+                loading = false
+            }
+        })
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.Start
     ) {
 
         Text(
-            text = "Panel Administrador",
+            text = "Perfil",
             style = MaterialTheme.typography.headlineMedium
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (loading) {
+            CircularProgressIndicator()
+        } else {
+            user?.let {
+
+                Text("Nombre: ${it.name}")
+                Text("Email: ${it.email}")
+                Text("Usuario: ${it.username}")
+                Text("Dirección: ${it.address ?: "No disponible"}")
+                Text("Fecha nacimiento: ${it.birthDate ?: "No disponible"}")
+                Text("Género: ${it.gender ?: "No disponible"}")
+                Text("Rol: ${it.role}")
+
+                if (it.stationId != null) {
+                    Text("Estación ID: ${it.stationId}")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Cambiar contraseña",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = passwordActual,
+            onValueChange = { passwordActual = it },
+            label = { Text("Contraseña actual") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = nuevaPassword,
+            onValueChange = { nuevaPassword = it },
+            label = { Text("Nueva contraseña") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = confirmarPassword,
+            onValueChange = { confirmarPassword = it },
+            label = { Text("Confirmar contraseña") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (mensaje.isNotEmpty()) {
+            Text(
+                text = mensaje,
+                color = if (mensaje.startsWith("✓"))
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+
+                if (passwordActual.isEmpty()) {
+                    mensaje = "Ingresa la contraseña actual"
+                    return@Button
+                }
+
+                if (nuevaPassword != confirmarPassword) {
+                    mensaje = "Las contraseñas no coinciden"
+                    return@Button
+                }
+
+                Thread {
+                    try {
+                        val api = Client.getClient(context).create(IAuthApi::class.java)
+
+                        val response = api.changePassword(
+                            ChangePasswordRequest(
+                                passwordActual,
+                                nuevaPassword
+                            )
+                        ).execute()
+
+                        if (response.isSuccessful) {
+                            mensaje = "✓ Contraseña actualizada"
+
+                            passwordActual = ""
+                            nuevaPassword = ""
+                            confirmarPassword = ""
+
+                        } else {
+                            mensaje = "Error al actualizar contraseña"
+                        }
+
+                    } catch (e: Exception) {
+                        mensaje = "Error de conexión"
+                    }
+                }.start()
+            }
+        ) {
+            Text("Cambiar contraseña")
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -134,7 +279,7 @@ fun PerfilAdminScreen(modifier: Modifier = Modifier) {
             onClick = {
 
                 val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-                prefs.edit { clear() }
+                prefs.edit {clear()}
 
                 val intent = Intent(context, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -622,7 +767,6 @@ fun TanqueCard(tanque: FuelTankResponse) {
     }
 }
 
-// ── PESTAÑA 2: RECARGAS ──────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
