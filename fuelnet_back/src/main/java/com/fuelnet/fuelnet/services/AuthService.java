@@ -78,6 +78,7 @@ public class AuthService {
         User user = User.builder()
                 .email(pendingUser.getEmail())
                 .name(pendingUser.getName())
+                .username(pendingUser.getName())
                 .password(pendingUser.getPassword())
                 .address(pendingUser.getAddress())
                 .birthDate(pendingUser.getBirthDate())
@@ -106,6 +107,16 @@ public class AuthService {
             return false;
         }
         return true;
+    }
+
+    public boolean change_password(User user, String newPassword) {
+        try {
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public LoginResponseDto login(LoginRequestDto request) {
@@ -140,6 +151,10 @@ public class AuthService {
 
         User user = User.builder()
                 .name(pendingAdmin.getName())
+                .address(pendingAdmin.getAddress())
+                .gender(pendingAdmin.getGender())
+                .birthDate(pendingAdmin.getBirthDate())
+                .username(pendingAdmin.getName())
                 .email(pendingAdmin.getEmail())
                 .password(pendingAdmin.getPassword())
                 .role(UserRole.STATION_ADMIN)

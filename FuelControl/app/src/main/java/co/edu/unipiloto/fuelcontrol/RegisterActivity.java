@@ -196,7 +196,6 @@ public class RegisterActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     mostrarDialogoExito();
                 } else {
-                    // Leer el cuerpo del error
                     String errorMsg = "Error " + response.code();
                     try {
                         if (response.errorBody() != null) {

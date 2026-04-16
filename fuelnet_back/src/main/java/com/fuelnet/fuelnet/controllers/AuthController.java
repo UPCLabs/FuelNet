@@ -5,9 +5,11 @@ import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
+import com.fuelnet.fuelnet.dto.UserMeDto;
 import com.fuelnet.fuelnet.models.PendingUser;
 import com.fuelnet.fuelnet.models.User;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
+import com.fuelnet.fuelnet.repositories.IUserRepository;
 import com.fuelnet.fuelnet.services.AuthService;
 
 import lombok.RequiredArgsConstructor;
@@ -32,30 +34,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final IUserRepository userRepository;
     private final IPendingUsersRepository pendingUsersRepository;
+
+    private UserMeDto toDto(User user) {
+        return UserMeDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .username(user.getUsername())
+                .address(user.getAddress())
+                .birthDate(user.getBirthDate())
+                .gender(user.getGender())
+                .role(user.getRole())
+                .stationId(user.getStation() != null ? user.getStation().getId() : null)
+                .build();
+    }
 
     @GetMapping("/me")
     public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-        Map<String, String> map = Map.of();
-        switch (user.getRole()) {
-            case USER: {
-                map = Map.of("message", "good User");
-                break;
-            }
-            case STATION_ADMIN: {
-                if (user.getStation() == null) {
-                    map = Map.of("station", "null");
-                } else {
-                    map = Map.of("station", user.getStation().getId().toString());
-                }
-                break;
-            }
-            case PLATFORM_ADMIN: {
-                map = Map.of("message", "good PLATFORM_ADMIN");
-                break;
-            }
-        }
-        return ResponseEntity.ok(map);
+        User dbUser = userRepository.findById(user.getId()).orElseThrow();
+        UserMeDto dto = toDto(dbUser);
+
+        return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/register")

@@ -193,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
+                        prefs.edit().clear().apply();
                         Toast.makeText(MainActivity.this,
                                 "Autenticación cancelada",
                                 Toast.LENGTH_SHORT).show();
@@ -215,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<MeResponse> call, retrofit2.Response<MeResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Integer stationId = response.body().getStation();
+                    Integer stationId = response.body().getStationId();
 
                     Intent intent;
                     if (stationId == null) {
