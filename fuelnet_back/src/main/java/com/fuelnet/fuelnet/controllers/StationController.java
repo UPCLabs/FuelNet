@@ -5,11 +5,15 @@ import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.dto.StationPriceResponseDto;
 import com.fuelnet.fuelnet.dto.StationsResponseDto;
 import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
-import com.fuelnet.fuelnet.interfaces.IStationService;
+import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.repositories.IUserRepository;
+import com.fuelnet.fuelnet.services.StationService;
 
 import java.util.List;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,13 +25,18 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class StationController {
 
-    private final IStationService stationService;
+    private final IUserRepository userRepository;
+    private final StationService stationService;
 
     @PostMapping
-    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'STATION_ADMIN')")
     public ResponseEntity<?> registerStation(
-            @RequestBody StationCreationRequestDto request) {
+            @RequestBody StationCreationRequestDto request,
+            @AuthenticationPrincipal User user) {
         Station saved = stationService.registerStation(request);
+
+        user.setStation(saved);
+        userRepository.save(user);
 
         return ResponseEntity.ok(saved);
     }
@@ -73,12 +82,19 @@ public class StationController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/prices")
+    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    public List<FuelPrice> getMyPrices(
+            @AuthenticationPrincipal User user) {
+        return stationService.getFuelPriceByStation(user.getStation().getId());
+    }
+
     @PutMapping("/prices")
-    @PreAuthorize("hasAnyRole('STATION_ADMIN','PLATFORM_ADMIN')")
-    public String updatePrices(
+    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    public Map<String, String> updatePrices(
             @RequestBody List<UpdateFuelPriceRequest> request,
             @AuthenticationPrincipal User user) {
         stationService.updateFuelPrices(user.getStation().getId(), request, user);
-        return "Precios actualizados";
+        return Map.of("message", "Precios actualizados");
     }
 }

@@ -23,6 +23,7 @@ import co.edu.unipiloto.fuelcontrol.api.INotificationApi;
 import co.edu.unipiloto.fuelcontrol.api.RegisterTokenRequest;
 import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse;
 import retrofit2.Call;
 
 public class MainActivity extends AppCompatActivity {
@@ -192,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
+                        prefs.edit().clear().apply();
                         Toast.makeText(MainActivity.this,
                                 "Autenticación cancelada",
                                 Toast.LENGTH_SHORT).show();
@@ -207,15 +209,56 @@ public class MainActivity extends AppCompatActivity {
         biometricPrompt.authenticate(promptInfo);
     }
 
-    private void irAlDashboard(String role) {
-        Intent intent;
+    private void verificarEstacion(String role) {
+        IAuthApi apiService = Client.getClient(this).create(IAuthApi.class);
 
-        if (role != null && role.equalsIgnoreCase("STATION_ADMIN")) {
-            intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
-        } else {
-            intent = new Intent(MainActivity.this, DashboardActivity.class);
+        apiService.getMe().enqueue(new retrofit2.Callback<MeResponse>() {
+            @Override
+            public void onResponse(Call<MeResponse> call, retrofit2.Response<MeResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Integer stationId = response.body().getStationId();
+
+                    Intent intent;
+                    if (stationId == null) {
+                        intent = new Intent(MainActivity.this, CreateStationActivity.class);
+                    } else {
+                        intent = new Intent(MainActivity.this, AdminDashboardActivity.class);
+                    }
+                    startActivity(intent);
+                    finish();
+                } else {
+                    Toast.makeText(MainActivity.this,
+                            "Error verificando cuenta", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MeResponse> call, Throwable t) {
+                System.out.println(t.getMessage());
+                Toast.makeText(MainActivity.this,
+                        "Error de conexión", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private Class<?> resolverDashboard(String role) {
+        switch (role.toUpperCase()) {
+            case "PLATFORM_ADMIN": return SuperAdminDashboardActivity.class;
+            case "STATION_ADMIN":  return null;
+            default:               return DashboardActivity.class;
+        }
+    }
+
+    private void irAlDashboard(String role) {
+        if (role == null) return;
+
+        if (role.equalsIgnoreCase("STATION_ADMIN")) {
+            verificarEstacion(role);
+            return;
         }
 
+        Class<?> destino = resolverDashboard(role);
+        Intent intent = new Intent(MainActivity.this, destino);
         startActivity(intent);
         finish();
     }

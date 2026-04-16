@@ -3,6 +3,7 @@ package co.edu.unipiloto.fuelcontrol
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +42,12 @@ import co.edu.unipiloto.fuelcontrol.api.requests.InventoryMovementResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material3.HorizontalDivider
+import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.api.UpdateFuelPriceRequest
+import co.edu.unipiloto.fuelcontrol.models.FuelPriceDto
+import kotlinx.coroutines.launch
 
 enum class AdminDestinations(
     val label: String,
@@ -50,6 +57,9 @@ enum class AdminDestinations(
     INVENTARIO("Inventario", Icons.Default.Inventory),
 
     ALERTAS("Alertas", Icons.Default.Notifications),
+
+    PRECIOS("Precios", Icons.Default.AttachMoney),
+
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
 
@@ -89,6 +99,7 @@ fun AdminDashboardScreen() {
                 AdminDestinations.FACTURAS -> FacturasScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.INVENTARIO -> InventarioScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.ALERTAS -> NotificacionesScreen(modifier = Modifier.padding(innerPadding))
+                AdminDestinations.PRECIOS -> PreciosScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.PERFIL -> PerfilAdminScreen(modifier = Modifier.padding(innerPadding))
             }
         }
@@ -359,6 +370,153 @@ fun InventarioScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PreciosScreen(modifier: Modifier = Modifier) {
+
+    val context = LocalContext.current
+    val api = Client.getClient(context).create(IStationApi::class.java)
+    val scope = rememberCoroutineScope()
+
+    var precio by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf("CORRIENTE") }
+    var expanded by remember { mutableStateOf(false) }
+    var estado by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+
+    var preciosActuales by remember { mutableStateOf<List<FuelPriceDto>>(emptyList()) }
+    var loadingPrecios by remember { mutableStateOf(true) }
+
+    val combustibles = listOf("CORRIENTE", "EXTRA", "DIESEL")
+
+    LaunchedEffect(Unit) {
+        try {
+            preciosActuales = api.getMyPrices()
+        } catch (e: Exception) {
+           Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
+        }
+        loadingPrecios = false
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+
+        Text("Actualizar precios", style = MaterialTheme.typography.titleLarge)
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            val fillMaxWidth = Modifier.fillMaxWidth()
+            OutlinedTextField(
+                value = tipo,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Tipo de combustible") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+                },
+                modifier = fillMaxWidth.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                combustibles.forEach {
+                    DropdownMenuItem(
+                        text = { Text(it) },
+                        onClick = {
+                            tipo = it
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = precio,
+            onValueChange = { precio = it },
+            label = { Text("Nuevo precio") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (estado.isNotEmpty()) {
+            Text(
+                estado,
+                color = if (estado.startsWith("✓"))
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+
+        Button(
+            onClick = {
+                val precioDouble = precio.toDoubleOrNull()
+
+                if (precioDouble == null) {
+                    estado = "Precio inválido"
+                    return@Button
+                }
+
+                scope.launch {
+                    loading = true
+                    try {
+                        val request = listOf(UpdateFuelPriceRequest(tipo, precioDouble))
+                        api.updatePrices(request)
+
+                        estado = "✓ Precio actualizado"
+                        precio = ""
+
+                        preciosActuales = api.getMyPrices()
+
+                    } catch (e: Exception) {
+                        Log.e("Admin", "Error actualizando precio", e)
+                        estado = "✗ Error: ${e.message}"
+                    } finally {
+                        loading = false
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp))
+            } else {
+                Text("Actualizar precio")
+            }
+        }
+        HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+        Text("Precios actuales", style = MaterialTheme.typography.titleMedium)
+
+        if (loadingPrecios) {
+            CircularProgressIndicator()
+        } else {
+            preciosActuales.forEach {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(it.fuelType ?: "—")
+                        Text(it.price?.let { p -> "$$p" } ?: "—")
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun NivelesTab() {
     val context = LocalContext.current
@@ -376,7 +534,7 @@ fun NivelesTab() {
                 if (response.isSuccessful && response.body() != null) {
                     tanques = response.body()!!
                     tanques.filter { it.fillPercentage <= 15.0 }.forEach {
-                        NotificationHelper.sendFuelAlert(context, it.fuelType, it.fillPercentage)
+
                     }
                 } else {
                     error = "Error al cargar niveles (${response.code()})"
