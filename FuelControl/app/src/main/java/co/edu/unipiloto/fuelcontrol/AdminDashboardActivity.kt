@@ -110,12 +110,25 @@ fun AdminDashboardScreen() {
 fun PerfilAdminScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
+    val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
+
+    var usuarioActual by remember {
+        mutableStateOf(prefs.getString("username", "") ?: "")
+    }
+
+    var usuarioEditado by remember { mutableStateOf(usuarioActual) }
+
+    var passwordActual by remember { mutableStateOf("") }
+    var nuevaPassword by remember { mutableStateOf("") }
+    var confirmarPassword by remember { mutableStateOf("") }
+
+    var mensaje by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -124,8 +137,100 @@ fun PerfilAdminScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.headlineMedium
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        //Muestra usuario
+        Text(
+            text = "Usuario actual: $usuarioActual",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Editar usuario
+        OutlinedTextField(
+            value = usuarioEditado,
+            onValueChange = { usuarioEditado = it },
+            label = { Text("Editar usuario") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Cambiar contraseña",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = passwordActual,
+            onValueChange = { passwordActual = it },
+            label = { Text("Contraseña actual") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = nuevaPassword,
+            onValueChange = { nuevaPassword = it },
+            label = { Text("Nueva contraseña") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = confirmarPassword,
+            onValueChange = { confirmarPassword = it },
+            label = { Text("Confirmar contraseña") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (mensaje.isNotEmpty()) {
+            Text(
+                text = mensaje,
+                color = if (mensaje.startsWith("✓"))
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+
+        //guardar cambios
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+
+                if (usuarioEditado == usuarioActual && nuevaPassword.isEmpty()) {
+                    mensaje = "No hay cambios"
+                    return@Button
+                }
+
+                if (nuevaPassword.isNotEmpty()) {
+
+                    if (passwordActual.isEmpty()) {
+                        mensaje = "Ingresa la contraseña actual"
+                        return@Button
+                    }
+
+                    if (nuevaPassword != confirmarPassword) {
+                        mensaje = "Las contraseñas no coinciden"
+                        return@Button
+                    }
+                }
+
+               //aqui que se guarde para que salte en mensaje mendiz
+
+                mensaje = " Datos actualizados"
+            }
+        ) {
+            Text("Guardar cambios")
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
 
+      //cerrar sesion
         Button(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
@@ -133,7 +238,6 @@ fun PerfilAdminScreen(modifier: Modifier = Modifier) {
             ),
             onClick = {
 
-                val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
                 prefs.edit { clear() }
 
                 val intent = Intent(context, MainActivity::class.java)
