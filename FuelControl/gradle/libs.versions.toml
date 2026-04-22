@@ -12,6 +12,7 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.4"
 kotlin = "2.3.10"
 composeBom = "2026.02.01"
+uiText = "1.10.6"
 
 [libraries]
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
@@ -34,6 +35,7 @@ ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
 material3-adaptive-navigation-suite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite" }
+ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

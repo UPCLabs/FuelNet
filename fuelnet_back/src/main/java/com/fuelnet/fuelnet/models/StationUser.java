@@ -1,8 +1,10 @@
 package com.fuelnet.fuelnet.models;
 
+import com.fuelnet.fuelnet.enums.Permission;
 import com.fuelnet.fuelnet.enums.UserRole;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -14,12 +16,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
-@Table(name = "users")
+@Table(name = "station_users")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails {
+public class StationUser implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +33,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String username;
 
     @Column(nullable = false)
@@ -54,9 +56,30 @@ public class User implements UserDetails {
     @JoinColumn(name = "station_id")
     private Station station;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    private List<Permission> permissions;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+
+        List<GrantedAuthority> authorities = new ArrayList<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
+
+        if (role == UserRole.STATION_ADMIN) {
+            authorities.add(new SimpleGrantedAuthority("MANAGE_PRICES"));
+            authorities.add(new SimpleGrantedAuthority("MANAGE_INVENTORY"));
+        }
+
+        if (permissions != null) {
+            authorities.addAll(
+                    permissions.stream()
+                            .map(p -> new SimpleGrantedAuthority(p.name()))
+                            .toList());
+        }
+
+        return authorities;
     }
 
     @Override

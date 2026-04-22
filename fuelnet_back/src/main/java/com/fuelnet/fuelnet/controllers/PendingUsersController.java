@@ -1,7 +1,7 @@
 package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.PendingUserDto;
-import com.fuelnet.fuelnet.enums.UserRole;
+import com.fuelnet.fuelnet.enums.PendingUserType;
 import com.fuelnet.fuelnet.models.PendingUser;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
 
@@ -30,7 +30,7 @@ public class PendingUsersController {
                 .address(user.getAddress())
                 .birthDate(user.getBirthDate().toString())
                 .gender(user.getGender())
-                .roleRequested(user.getRoleRequested().name())
+                .roleRequested(user.getType().name())
                 .build();
     }
 
@@ -51,7 +51,7 @@ public class PendingUsersController {
     public ResponseEntity<?> getPendingUsers() {
 
         List<PendingUserDto> dtoList = pendingUsersRepository
-                .findByRoleRequestedNot(UserRole.USER)
+                .findByTypeNot(PendingUserType.CUSTOMER)
                 .stream()
                 .map(this::toDto)
                 .toList();

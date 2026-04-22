@@ -2,6 +2,7 @@ package co.edu.unipiloto.fuelcontrol.api;
 
 import co.edu.unipiloto.fuelcontrol.api.requests.AuthResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest;
+import co.edu.unipiloto.fuelcontrol.api.requests.CreateEmployeeRequest;
 import co.edu.unipiloto.fuelcontrol.api.requests.LoginRequest;
 import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse;
 import co.edu.unipiloto.fuelcontrol.api.requests.RegisterRequest;
@@ -54,5 +55,10 @@ public interface IAuthApi {
     Call<Void> markAsRead(
             @Header("Authorization") String token,
             @Path("id") Long id
+    );
+
+    @POST("/api/auth/create-employee")
+    Call<Void> createEmployee(
+            @Body CreateEmployeeRequest request
     );
 }

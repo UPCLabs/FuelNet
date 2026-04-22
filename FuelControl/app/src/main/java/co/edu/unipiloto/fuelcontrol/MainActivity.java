@@ -279,6 +279,7 @@ public class MainActivity extends AppCompatActivity {
     private Class<?> resolverDashboard(String role) {
         switch (role.toUpperCase()) {
             case "PLATFORM_ADMIN": return SuperAdminDashboardActivity.class;
+            case "EMPLOYEE": return AdminDashboardActivity.class;
             case "STATION_ADMIN":  return null;
             default:               return DashboardActivity.class;
         }
