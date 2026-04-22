@@ -1,8 +1,8 @@
 package com.fuelnet.fuelnet.config;
 
 import com.fuelnet.fuelnet.enums.UserRole;
-import com.fuelnet.fuelnet.models.User;
-import com.fuelnet.fuelnet.repositories.IUserRepository;
+import com.fuelnet.fuelnet.models.StationUser;
+import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataInit implements CommandLineRunner {
 
-    private final IUserRepository userRepository;
+    private final IStationUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -25,7 +25,7 @@ public class DataInit implements CommandLineRunner {
         boolean exists = userRepository.existsByEmail(adminEmail);
 
         if (!exists) {
-            User admin = User.builder()
+            StationUser admin = StationUser.builder()
                     .name("admin")
                     .username("admin")
                     .address("Adminlandia")

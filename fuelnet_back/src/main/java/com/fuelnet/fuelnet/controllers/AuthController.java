@@ -1,15 +1,19 @@
 package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.AdminRegisterRequest;
+import com.fuelnet.fuelnet.dto.AppUserMeDto;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
-import com.fuelnet.fuelnet.dto.UserMeDto;
+import com.fuelnet.fuelnet.dto.StationUserMeDto;
+import com.fuelnet.fuelnet.enums.PendingUserType;
+import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.PendingUser;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
+import com.fuelnet.fuelnet.repositories.IAppUserRepository;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
-import com.fuelnet.fuelnet.repositories.IUserRepository;
+import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 import com.fuelnet.fuelnet.services.AuthService;
 
 import lombok.RequiredArgsConstructor;
@@ -34,11 +38,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final IUserRepository userRepository;
+    private final IStationUserRepository stationUserRepository;
+    private final IAppUserRepository appUserRepository;
     private final IPendingUsersRepository pendingUsersRepository;
 
-    private UserMeDto toDto(User user) {
-        return UserMeDto.builder()
+    private StationUserMeDto toStationDto(StationUser user) {
+        return StationUserMeDto.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
@@ -51,11 +56,29 @@ public class AuthController {
                 .build();
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-        UserMeDto dto = toDto(user);
+    private AppUserMeDto toAppUserDto(AppUser user) {
+        return AppUserMeDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .address(user.getAddress())
+                .birthDate(user.getBirthDate())
+                .gender(user.getGender())
+                .build();
+    }
 
-        return ResponseEntity.ok(dto);
+    @GetMapping("/me")
+    public ResponseEntity<?> me(@AuthenticationPrincipal Object user) {
+
+        if (user instanceof StationUser stationUser) {
+            return ResponseEntity.ok(toStationDto(stationUser));
+        }
+
+        if (user instanceof AppUser appUser) {
+            return ResponseEntity.ok(toAppUserDto(appUser));
+        }
+
+        return ResponseEntity.status(401).build();
     }
 
     @PostMapping("/register")
@@ -79,7 +102,11 @@ public class AuthController {
             throw new RuntimeException("Token expired");
         }
 
-        authService.createUserFromPending(pendingUser);
+        if (pendingUser.getType() == PendingUserType.CUSTOMER) {
+            authService.createAppUserFromPending(pendingUser);
+        } else {
+            authService.createStationUserFromPending(pendingUser);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", "Tu cuenta ya fue verificada, inicia sesión"));
@@ -104,6 +131,7 @@ public class AuthController {
             LoginResponseDto response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }

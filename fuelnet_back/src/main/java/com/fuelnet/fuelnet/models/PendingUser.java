@@ -3,7 +3,7 @@ package com.fuelnet.fuelnet.models;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import com.fuelnet.fuelnet.enums.UserRole;
+import com.fuelnet.fuelnet.enums.PendingUserType;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,5 +42,5 @@ public class PendingUser {
     private LocalDateTime tokenExpiration;
 
     @Enumerated(EnumType.STRING)
-    private UserRole roleRequested;
+    private PendingUserType type;
 }

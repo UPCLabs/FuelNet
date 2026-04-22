@@ -5,14 +5,18 @@ import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
+import com.fuelnet.fuelnet.enums.PendingUserType;
 import com.fuelnet.fuelnet.enums.UserRole;
+import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.PendingUser;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
+import com.fuelnet.fuelnet.repositories.IAppUserRepository;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
-import com.fuelnet.fuelnet.repositories.IUserRepository;
+import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +27,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final IUserRepository userRepository;
+    private final IStationUserRepository stationUserRepository;
+    private final IAppUserRepository appUserRepository;
     private final IPendingUsersRepository pendingUsersRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -31,26 +36,26 @@ public class AuthService {
     private final Logger logger = Logger.getLogger("auth_service");
 
     public SignupResponseDto registerPendingUserClient(SignupRequestDto request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (stationUserRepository.findByEmail(request.getEmail()).isPresent()) {
             logger.info("User is already registered");
             throw new RuntimeException("Email is already sign up");
         }
         String token = UUID.randomUUID().toString();
-        UserRole role = UserRole.USER;
+        PendingUserType pendingType = PendingUserType.CUSTOMER;
         switch (request.getRole()) {
             case "Usuario": {
-                role = UserRole.USER;
+                pendingType = PendingUserType.CUSTOMER;
                 break;
             }
             case "Administrador de estacion": {
-                role = UserRole.STATION_ADMIN;
+                pendingType = PendingUserType.STATION_ADMIN;
                 break;
             }
         }
 
         PendingUser pendingUser = PendingUser.builder()
                 .email(request.getEmail())
-                .roleRequested(role)
+                .type(pendingType)
                 .name(request.getName())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .address(request.getAddress())
@@ -62,7 +67,7 @@ public class AuthService {
 
         pendingUsersRepository.save(pendingUser);
 
-        if (role != UserRole.USER) {
+        if (pendingType == PendingUserType.STATION_ADMIN) {
             emailService.sendPlatformAdminReviewMail();
             emailService.sendWaitingForRevision(pendingUser.getEmail());
             logger.info("Admin has been register, needs admin to confirm email");
@@ -74,8 +79,8 @@ public class AuthService {
         return new SignupResponseDto("User has been register");
     }
 
-    public boolean createUserFromPending(PendingUser pendingUser) {
-        User user = User.builder()
+    public boolean createStationUserFromPending(PendingUser pendingUser) {
+        StationUser user = StationUser.builder()
                 .email(pendingUser.getEmail())
                 .name(pendingUser.getName())
                 .username(pendingUser.getName())
@@ -83,19 +88,18 @@ public class AuthService {
                 .address(pendingUser.getAddress())
                 .birthDate(pendingUser.getBirthDate())
                 .gender(pendingUser.getGender())
-                .role(pendingUser.getRoleRequested())
+                .role(UserRole.STATION_ADMIN)
                 .build();
 
         try {
-            userRepository.save(user);
+            stationUserRepository.save(user);
             pendingUsersRepository.delete(pendingUser);
             switch (user.getRole()) {
-                case USER: {
-                    emailService.sendSuccessUserVerification(user.getEmail());
-                    break;
-                }
                 case STATION_ADMIN: {
                     emailService.sendApproveByAdmin(user.getEmail());
+                    break;
+                }
+                case EMPLOYEE: {
                     break;
                 }
                 case PLATFORM_ADMIN: {
@@ -109,13 +113,34 @@ public class AuthService {
         return true;
     }
 
-    public boolean change_password(User user, String oldPassword, String newPassword) {
+    public boolean createAppUserFromPending(PendingUser pendingUser) {
+        AppUser user = AppUser.builder()
+                .email(pendingUser.getEmail())
+                .name(pendingUser.getName())
+                .password(pendingUser.getPassword())
+                .address(pendingUser.getAddress())
+                .birthDate(pendingUser.getBirthDate())
+                .gender(pendingUser.getGender())
+                .build();
+
+        try {
+            appUserRepository.save(user);
+            pendingUsersRepository.delete(pendingUser);
+            emailService.sendSuccessUserVerification(user.getEmail());
+        } catch (Exception e) {
+            logger.severe("Failed to create user");
+            return false;
+        }
+        return true;
+    }
+
+    public boolean change_password(StationUser user, String oldPassword, String newPassword) {
         try {
             if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
                 return false;
             }
             user.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(user);
+            stationUserRepository.save(user);
             return true;
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -124,25 +149,47 @@ public class AuthService {
     }
 
     public LoginResponseDto login(LoginRequestDto request) {
-        User user = userRepository
-                .findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Password incorrect");
+        Optional<StationUser> stationUserOpt = stationUserRepository.findByEmail(request.getEmail());
+
+        if (stationUserOpt.isPresent()) {
+            StationUser user = stationUserOpt.get();
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new RuntimeException("Password incorrect");
+            }
+
+            String token = jwtService.generateToken(user);
+
+            return new LoginResponseDto(
+                    token,
+                    user.getRole().name());
         }
 
-        logger.info("User login successful");
-        String token = jwtService.generateToken(user);
+        Optional<AppUser> appUserOpt = appUserRepository.findByEmail(request.getEmail());
 
-        return new LoginResponseDto(token, user.getRole().name());
+        if (appUserOpt.isPresent()) {
+            AppUser user = appUserOpt.get();
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new RuntimeException("Password incorrect");
+            }
+
+            String token = jwtService.generateTokenForAppUser(user);
+
+            return new LoginResponseDto(
+                    token,
+                    "APP_USER");
+        }
+
+        throw new RuntimeException("User not found");
     }
 
     public SignupResponseDto registerStationAdmin(
             AdminRegisterRequest request) {
         PendingUser pendingAdmin = pendingUsersRepository.findById(request.getPendingUserId()).orElseThrow();
 
-        if (userRepository.findByEmail(pendingAdmin.getEmail()).isPresent()) {
+        if (stationUserRepository.findByEmail(pendingAdmin.getEmail()).isPresent()) {
             logger.info("User is already registered");
             throw new RuntimeException("Email is already sign up");
         }
@@ -153,7 +200,7 @@ public class AuthService {
             return new SignupResponseDto("User has been rejected");
         }
 
-        User user = User.builder()
+        StationUser user = StationUser.builder()
                 .name(pendingAdmin.getName())
                 .address(pendingAdmin.getAddress())
                 .gender(pendingAdmin.getGender())
@@ -164,7 +211,7 @@ public class AuthService {
                 .role(UserRole.STATION_ADMIN)
                 .build();
 
-        userRepository.save(user);
+        stationUserRepository.save(user);
         pendingUsersRepository.delete(pendingAdmin);
         emailService.sendApproveByAdmin(user.getEmail());
         logger.info("Station admin has been registered");

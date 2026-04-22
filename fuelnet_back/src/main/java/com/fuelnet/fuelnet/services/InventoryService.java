@@ -18,14 +18,14 @@ public class InventoryService {
     private final IFuelTankRepository tankRepository;
     private final IInventoryMovementRepository movementRepository;
 
-    public List<FuelTankResponse> getDashboard(User admin) {
+    public List<FuelTankResponse> getDashboard(StationUser admin) {
         Long stationId = getStationId(admin);
         return tankRepository.findByStationId(stationId)
                 .stream().map(this::toTankResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public InventoryMovementResponse recharge(RechargeRequest request, User admin) {
+    public InventoryMovementResponse recharge(RechargeRequest request, StationUser admin) {
         Long stationId = getStationId(admin);
 
         FuelTank tank = tankRepository.findByStationIdAndFuelType(stationId, request.getFuelType())
@@ -58,13 +58,13 @@ public class InventoryService {
         return toMovementResponse(movementRepository.save(movement));
     }
 
-    public List<InventoryMovementResponse> getHistory(User admin) {
+    public List<InventoryMovementResponse> getHistory(StationUser admin) {
         Long stationId = getStationId(admin);
         return movementRepository.findByTank_StationIdOrderByRechargeDateDesc(stationId)
                 .stream().map(this::toMovementResponse).collect(Collectors.toList());
     }
 
-    private Long getStationId(User admin) {
+    private Long getStationId(StationUser admin) {
         if (admin.getStation() == null) {
             throw new RuntimeException("Este administrador no tiene una estación asignada");
         }

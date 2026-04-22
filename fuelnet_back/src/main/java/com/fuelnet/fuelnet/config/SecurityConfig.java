@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .role("PLATFORM_ADMIN")
                 .implies("STATION_ADMIN")
                 .role("STATION_ADMIN")
-                .implies("USER")
+                .implies("EMPLOYEE")
                 .build();
     }
 

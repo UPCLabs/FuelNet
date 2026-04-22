@@ -14,12 +14,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
-@Table(name = "users")
+@Table(name = "station_users")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails {
+public class StationUser implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,7 +31,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String username;
 
     @Column(nullable = false)
