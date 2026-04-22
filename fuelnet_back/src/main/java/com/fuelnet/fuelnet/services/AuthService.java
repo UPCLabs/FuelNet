@@ -7,6 +7,7 @@ import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
 import com.fuelnet.fuelnet.enums.PendingUserType;
+import com.fuelnet.fuelnet.enums.Permission;
 import com.fuelnet.fuelnet.enums.UserRole;
 import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.PendingUser;
@@ -17,6 +18,7 @@ import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -210,6 +212,7 @@ public class AuthService {
                 .email(pendingAdmin.getEmail())
                 .password(pendingAdmin.getPassword())
                 .role(UserRole.STATION_ADMIN)
+                .permissions(List.of(Permission.values()))
                 .build();
 
         stationUserRepository.save(user);

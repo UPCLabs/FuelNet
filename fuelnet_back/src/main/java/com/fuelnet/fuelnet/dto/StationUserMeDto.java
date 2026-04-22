@@ -1,6 +1,7 @@
 package com.fuelnet.fuelnet.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.fuelnet.fuelnet.enums.UserRole;
 
@@ -18,4 +19,6 @@ public class StationUserMeDto {
     private String gender;
     private UserRole role;
     private Long stationId;
+
+    private List<String> permissions;
 }

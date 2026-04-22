@@ -18,6 +18,7 @@ import com.fuelnet.fuelnet.services.AuthService;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,12 @@ public class AuthController {
                 .gender(user.getGender())
                 .role(user.getRole())
                 .stationId(user.getStation() != null ? user.getStation().getId() : null)
+                .permissions(user.getPermissions() != null
+                        ? user.getPermissions()
+                                .stream()
+                                .map(Enum::name)
+                                .toList()
+                        : List.of())
                 .build();
     }
 
