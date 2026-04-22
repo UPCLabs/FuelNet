@@ -1,8 +1,10 @@
 package com.fuelnet.fuelnet.models;
 
+import com.fuelnet.fuelnet.enums.Permission;
 import com.fuelnet.fuelnet.enums.UserRole;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -54,9 +56,30 @@ public class StationUser implements UserDetails {
     @JoinColumn(name = "station_id")
     private Station station;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    private List<Permission> permissions;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+
+        List<GrantedAuthority> authorities = new ArrayList<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
+
+        if (role == UserRole.STATION_ADMIN) {
+            authorities.add(new SimpleGrantedAuthority("MANAGE_PRICES"));
+            authorities.add(new SimpleGrantedAuthority("MANAGE_INVENTORY"));
+        }
+
+        if (permissions != null) {
+            authorities.addAll(
+                    permissions.stream()
+                            .map(p -> new SimpleGrantedAuthority(p.name()))
+                            .toList());
+        }
+
+        return authorities;
     }
 
     @Override

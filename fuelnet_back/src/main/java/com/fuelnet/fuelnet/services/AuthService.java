@@ -1,6 +1,7 @@
 package com.fuelnet.fuelnet.services;
 
 import com.fuelnet.fuelnet.dto.AdminRegisterRequest;
+import com.fuelnet.fuelnet.dto.CreateEmployeeDto;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
@@ -216,5 +217,27 @@ public class AuthService {
         emailService.sendApproveByAdmin(user.getEmail());
         logger.info("Station admin has been registered");
         return new SignupResponseDto("User has been registered");
+    }
+
+    public StationUser createEmployee(CreateEmployeeDto request, StationUser admin) {
+        if (admin.getRole() != UserRole.STATION_ADMIN) {
+            throw new RuntimeException("No autorizado");
+        }
+
+        if (stationUserRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email ya existe");
+        }
+
+        StationUser user = StationUser.builder()
+                .name(request.getName())
+                .username(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(UserRole.EMPLOYEE)
+                .permissions(request.getPermissions())
+                .station(admin.getStation())
+                .build();
+
+        return stationUserRepository.save(user);
     }
 }

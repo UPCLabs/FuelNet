@@ -19,14 +19,14 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<FuelTankResponse>> getDashboard(
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(inventoryService.getDashboard(admin));
     }
 
     @PostMapping("/recharge")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<InventoryMovementResponse> recharge(
             @RequestBody RechargeRequest request,
             @AuthenticationPrincipal StationUser admin) {
@@ -34,7 +34,7 @@ public class InventoryController {
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<InventoryMovementResponse>> getHistory(
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(inventoryService.getHistory(admin));

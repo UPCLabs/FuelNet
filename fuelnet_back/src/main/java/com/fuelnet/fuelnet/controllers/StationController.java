@@ -29,7 +29,7 @@ public class StationController {
     private final StationService stationService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'STATION_ADMIN')")
+    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
     public ResponseEntity<?> registerStation(
             @RequestBody StationCreationRequestDto request,
             @AuthenticationPrincipal StationUser user) {
@@ -83,14 +83,14 @@ public class StationController {
     }
 
     @GetMapping("/prices")
-    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_PRICES')")
     public List<FuelPrice> getMyPrices(
             @AuthenticationPrincipal StationUser user) {
         return stationService.getFuelPriceByStation(user.getStation().getId());
     }
 
     @PutMapping("/prices")
-    @PreAuthorize("hasAnyRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_PRICES')")
     public Map<String, String> updatePrices(
             @RequestBody List<UpdateFuelPriceRequest> request,
             @AuthenticationPrincipal StationUser user) {

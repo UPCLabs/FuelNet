@@ -2,6 +2,7 @@ package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.AdminRegisterRequest;
 import com.fuelnet.fuelnet.dto.AppUserMeDto;
+import com.fuelnet.fuelnet.dto.CreateEmployeeDto;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
@@ -11,9 +12,7 @@ import com.fuelnet.fuelnet.enums.PendingUserType;
 import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.PendingUser;
 import com.fuelnet.fuelnet.models.StationUser;
-import com.fuelnet.fuelnet.repositories.IAppUserRepository;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
-import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 import com.fuelnet.fuelnet.services.AuthService;
 
 import lombok.RequiredArgsConstructor;
@@ -38,8 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final IStationUserRepository stationUserRepository;
-    private final IAppUserRepository appUserRepository;
     private final IPendingUsersRepository pendingUsersRepository;
 
     private StationUserMeDto toStationDto(StationUser user) {
@@ -134,5 +131,14 @@ public class AuthController {
             System.out.println(e.getMessage());
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PostMapping("/create-employee")
+    @PreAuthorize("hasRole('STATION_ADMIN')")
+    public ResponseEntity<StationUser> createUser(
+            @RequestBody CreateEmployeeDto request,
+            @AuthenticationPrincipal StationUser admin) {
+        return ResponseEntity.ok(
+                authService.createEmployee(request, admin));
     }
 }

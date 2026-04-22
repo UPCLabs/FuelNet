@@ -19,14 +19,14 @@ public class AlertController {
     private final AlertService alertService;
 
     @GetMapping
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<AlertResponse>> getAlerts(
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(alertService.getAlerts(admin));
     }
 
     @GetMapping("/unread-count")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Map<String, Long>> getUnreadCount(
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(
@@ -34,7 +34,7 @@ public class AlertController {
     }
 
     @PatchMapping("/{id}/read")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Void> markAsRead(
             @PathVariable Long id,
             @AuthenticationPrincipal StationUser admin) {
@@ -43,7 +43,7 @@ public class AlertController {
     }
 
     @PutMapping("/threshold")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Void> updateThreshold(
             @RequestBody ThresholdRequest request,
             @AuthenticationPrincipal StationUser admin) {

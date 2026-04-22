@@ -20,7 +20,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_FACTURATION')")
     public ResponseEntity<PaymentResponse> create(
             @RequestBody CreatePaymentRequest request,
             @AuthenticationPrincipal StationUser admin) {
@@ -28,14 +28,14 @@ public class PaymentController {
     }
 
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_FACTURATION')")
     public ResponseEntity<List<PaymentResponse>> getAdminPayments(
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(paymentService.getPaymentsByAdmin(admin));
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_FACTURATION')")
     public ResponseEntity<PaymentResponse> cancel(
             @PathVariable Long id,
             @AuthenticationPrincipal StationUser admin) {
