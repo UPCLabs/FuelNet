@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.material3.adaptive.navigation.suite)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.ui.text)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
