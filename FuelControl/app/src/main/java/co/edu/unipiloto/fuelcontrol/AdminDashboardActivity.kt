@@ -951,6 +951,87 @@ fun HistorialTab() {
                     }
                 }
             }
+            fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
+                val document = android.graphics.pdf.PdfDocument()
+                val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
+                val page = document.startPage(pageInfo)
+                val canvas = page.canvas
+                val paint = android.graphics.Paint()
+
+                // Título
+                paint.textSize = 20f
+                paint.isFakeBoldText = true
+                canvas.drawText("Historial de Movimientos de Inventario", 40f, 60f, paint)
+
+                // Fecha de generación (no se si funciona)
+                paint.textSize = 12f
+                paint.isFakeBoldText = false
+                paint.color = android.graphics.Color.GRAY
+                canvas.drawText("Generado: ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}", 40f, 85f, paint)
+
+                // Línea separadora
+                paint.color = android.graphics.Color.BLACK
+                paint.strokeWidth = 1f
+                canvas.drawLine(40f, 95f, 555f, 95f, paint)
+
+                // Encabezados
+                paint.isFakeBoldText = true
+                paint.textSize = 13f
+                canvas.drawText("Tipo", 40f, 120f, paint)
+                canvas.drawText("Proveedor", 160f, 120f, paint)
+                canvas.drawText("Cantidad", 340f, 120f, paint)
+                canvas.drawText("Fecha", 440f, 120f, paint)
+                canvas.drawLine(40f, 128f, 555f, 128f, paint)
+
+                // deberian verse las filas
+                paint.isFakeBoldText = false
+                paint.textSize = 12f
+                var y = 150f
+                historial.forEach { mov ->
+                    canvas.drawText(mov.fuelType, 40f, y, paint)
+                    canvas.drawText(mov.supplier ?: "Venta", 160f, y, paint)
+                    canvas.drawText("${mov.gallonsAdded.toInt()} gal", 340f, y, paint)
+                    canvas.drawText(mov.rechargeDate.take(10), 440f, y, paint)
+                    y += 30f
+                }
+
+                canvas.drawLine(40f, y + 5f, 555f, y + 5f, paint)
+                document.finishPage(page)
+
+                try {
+                    val fileName = "inventario_${System.currentTimeMillis()}.pdf"
+                    val file = java.io.File(context.getExternalFilesDir(null), fileName)
+                    document.writeTo(java.io.FileOutputStream(file))
+                    document.close()
+
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        file
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/pdf")
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(intent)
+                    Toast.makeText(context, "PDF generado correctamente", Toast.LENGTH_SHORT).show()
+
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error al generar PDF", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+           //deberia pedir la app de pdf del celu
+            item {
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { generarPDF(context, historial) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Exportar PDF")
+                }
+            }
         }
     }
+
 }

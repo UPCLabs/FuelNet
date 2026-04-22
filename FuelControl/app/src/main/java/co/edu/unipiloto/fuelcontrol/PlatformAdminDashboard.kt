@@ -13,11 +13,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -28,14 +28,13 @@ import androidx.core.content.edit
 import co.edu.unipiloto.fuelcontrol.api.AdminAceptationRequest
 import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
+import co.edu.unipiloto.fuelcontrol.api.IPendingUserApi
+import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
+import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import co.edu.unipiloto.fuelcontrol.api.IPendingUserApi
-import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
-import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
-
 
 enum class SuperAdminDestinations(
     val label: String,
@@ -43,9 +42,9 @@ enum class SuperAdminDestinations(
 ) {
     HOME("Inicio", Icons.Default.Home),
     SOLICITUDES("Solicitudes", Icons.Default.PersonAdd),
+    USUARIOS("Usuarios", Icons.Default.ManageAccounts),
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
-
 
 class SuperAdminDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +57,6 @@ class SuperAdminDashboardActivity : ComponentActivity() {
         }
     }
 }
-
 
 @Composable
 fun SuperAdminDashboardScreen() {
@@ -82,6 +80,8 @@ fun SuperAdminDashboardScreen() {
                     SuperAdminHomeScreen(modifier = Modifier.padding(innerPadding))
                 SuperAdminDestinations.SOLICITUDES ->
                     SolicitudesScreen(modifier = Modifier.padding(innerPadding))
+                SuperAdminDestinations.USUARIOS ->
+                    GestionUsuariosScreen(modifier = Modifier.padding(innerPadding))
                 SuperAdminDestinations.PERFIL ->
                     SuperAdminPerfilScreen(modifier = Modifier.padding(innerPadding))
             }
@@ -89,38 +89,23 @@ fun SuperAdminDashboardScreen() {
     }
 }
 
-
 @Composable
 fun SuperAdminHomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
     val adminName = prefs.getString("userName", "Administrador") ?: "Administrador"
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(32.dp)
         ) {
-            Text(
-                text = "👋 Bienvenido,",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = adminName,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text(text = "👋 Bienvenido,", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = adminName, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -133,7 +118,6 @@ fun SuperAdminHomeScreen(modifier: Modifier = Modifier) {
         }
     }
 }
-
 
 @Composable
 fun SolicitudesScreen(modifier: Modifier = Modifier) {
@@ -152,15 +136,9 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
         isLoading = true
         error = null
         api.getPendingUsers().enqueue(object : Callback<List<PendingUserDto>> {
-            override fun onResponse(
-                call: Call<List<PendingUserDto>>,
-                response: Response<List<PendingUserDto>>
-            ) {
-                if (response.isSuccessful && response.body() != null) {
-                    solicitudes = response.body()!!
-                } else {
-                    error = "Error al cargar solicitudes (${response.code()})"
-                }
+            override fun onResponse(call: Call<List<PendingUserDto>>, response: Response<List<PendingUserDto>>) {
+                if (response.isSuccessful && response.body() != null) solicitudes = response.body()!!
+                else error = "Error al cargar solicitudes (${response.code()})"
                 isLoading = false
             }
             override fun onFailure(call: Call<List<PendingUserDto>>, t: Throwable) {
@@ -172,20 +150,13 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
 
     fun resolve(user: PendingUserDto, accepted: Boolean) {
         resolvingId = user.id
-        val request = AdminAceptationRequest(
-            pendingUserId = user.id,
-            accepted = accepted,
-            roleRequested = user.roleRequested
-        )
+        val request = AdminAceptationRequest(pendingUserId = user.id, accepted = accepted, roleRequested = user.roleRequested)
         api.resolveUser(request).enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                resolvingId = null
-                selectedUser = null
-                loadSolicitudes()
+                resolvingId = null; selectedUser = null; loadSolicitudes()
             }
             override fun onFailure(call: Call<Void>, t: Throwable) {
-                resolvingId = null
-                selectedUser = null
+                resolvingId = null; selectedUser = null
             }
         })
     }
@@ -195,9 +166,7 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
     selectedUser?.let { user ->
         AlertDialog(
             onDismissRequest = { selectedUser = null },
-            title = {
-                Text("Detalle de solicitud", fontWeight = FontWeight.Bold)
-            },
+            title = { Text("Detalle de solicitud", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     DetalleRow("Nombre", user.name)
@@ -208,271 +177,244 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
                     DetalleRow("Rol solicitado", user.roleRequested)
                 }
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        resolve(user, true)
-                    }
-                ) {
-                    Text("✓ Aprobar")
-                }
-            },
+            confirmButton = { Button(onClick = { resolve(user, true) }) { Text("✓ Aprobar") } },
             dismissButton = {
                 OutlinedButton(
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    onClick = {
-                        resolve(user, false)
-                    }
-                ) {
-                    Text("✗ Rechazar")
-                }
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    onClick = { resolve(user, false) }
+                ) { Text("✗ Rechazar") }
             }
         )
     }
 
     when {
-        isLoading -> Box(Modifier
-            .fillMaxSize()
-            .then(modifier), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-
-        error != null -> Box(Modifier
-            .fillMaxSize()
-            .then(modifier), contentAlignment = Alignment.Center) {
-            Text(error!!, color = MaterialTheme.colorScheme.error)
-        }
-
-        solicitudes.isEmpty() -> Box(
-            Modifier
-                .fillMaxSize()
-                .then(modifier),
-            contentAlignment = Alignment.Center
-        ) {
+        isLoading -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        error != null -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) { Text(error!!, color = MaterialTheme.colorScheme.error) }
+        solicitudes.isEmpty() -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🎉", style = MaterialTheme.typography.displaySmall)
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "No hay solicitudes pendientes",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("No hay solicitudes pendientes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        else -> LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+        else -> LazyColumn(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                Text(
-                    "Solicitudes pendientes",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "${solicitudes.size} solicitud(es) por revisar",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Solicitudes pendientes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("${solicitudes.size} solicitud(es) por revisar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
             }
-
             items(solicitudes) { user ->
-                SolicitudCard(
-                    user = user,
-                    isResolving = resolvingId == user.id,
-                    onVerDetalle = { selectedUser = user },
-                    onAprobar = {
-                        resolve(user, true)
-                    },
-                    onRechazar = {
-                        resolve(user, false)
-                    }
-                )
+                SolicitudCard(user = user, isResolving = resolvingId == user.id, onVerDetalle = { selectedUser = user }, onAprobar = { resolve(user, true) }, onRechazar = { resolve(user, false) })
             }
         }
     }
 }
 
-
 @Composable
-fun SolicitudCard(
-    user: PendingUserDto,
-    isResolving: Boolean,
-    onVerDetalle: () -> Unit,
-    onAprobar: () -> Unit,
-    onRechazar: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
+fun SolicitudCard(user: PendingUserDto, isResolving: Boolean, onVerDetalle: () -> Unit, onAprobar: () -> Unit, onRechazar: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(user.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        user.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text(user.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (isResolving) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 } else {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = user.roleRequested,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
+                        Text(text = user.roleRequested, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
             }
-
             Spacer(Modifier.height(12.dp))
-
             if (isResolving) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Procesando...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Text("Procesando...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onVerDetalle,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Ver detalle", style = MaterialTheme.typography.labelMedium)
-                    }
-                    OutlinedButton(
-                        onClick = onRechazar,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Rechazar", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Button(
-                        onClick = onAprobar,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Aprobar", style = MaterialTheme.typography.labelMedium)
-                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onVerDetalle, modifier = Modifier.weight(1f)) { Text("Ver detalle", style = MaterialTheme.typography.labelMedium) }
+                    OutlinedButton(onClick = onRechazar, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Rechazar", style = MaterialTheme.typography.labelMedium) }
+                    Button(onClick = onAprobar, modifier = Modifier.weight(1f)) { Text("Aprobar", style = MaterialTheme.typography.labelMedium) }
                 }
             }
         }
     }
 }
 
-
 @Composable
 fun DetalleRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "$label:",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.4f)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(0.6f)
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(text = "$label:", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.4f))
+        Text(text = value, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(0.6f))
     }
 }
+
+// Este es el gestor de usuarios mendiz
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GestionUsuariosScreen(modifier: Modifier = Modifier) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Crear", "Usuarios activos")
+
+    Column(modifier = modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTab) {
+            tabs.forEachIndexed { index, title ->
+                Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+            }
+        }
+        when (selectedTab) {
+            0 -> CrearUsuarioTab()
+            1 -> UsuariosActivosTab()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CrearUsuarioTab() {
+    val context = LocalContext.current
+    var nombre by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var rolSeleccionado by remember { mutableStateOf("PRICE_ADMIN") }
+    var expandedRol by remember { mutableStateOf(false) }
+    var estado by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val roles = listOf("PRICE_ADMIN", "INVENTORY_ADMIN")
+
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Text("Crear usuario con rol", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre completo") }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+
+            ExposedDropdownMenuBox(expanded = expandedRol, onExpandedChange = { expandedRol = !expandedRol }) {
+                OutlinedTextField(
+                    value = rolSeleccionado, onValueChange = {}, readOnly = true,
+                    label = { Text("Rol") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRol) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                )
+                ExposedDropdownMenu(expanded = expandedRol, onDismissRequest = { expandedRol = false }) {
+                    roles.forEach { rol -> DropdownMenuItem(text = { Text(rol) }, onClick = { rolSeleccionado = rol; expandedRol = false }) }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            if (estado.isNotEmpty()) {
+                Text(text = estado, color = if (estado.startsWith("✓")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            Button(
+                onClick = {
+                    if (nombre.isEmpty() || email.isEmpty() || password.isEmpty()) { estado = "Completa todos los campos"; return@Button }
+                    isLoading = true
+                    //aqui deberia ir el endpoint mendiz
+                    estado = " "
+                    isLoading = false
+                },
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                else Text("Crear usuario")
+            }
+        }
+    }
+}
+
+@Composable
+fun UsuariosActivosTab() {
+    // aqui otro endpoint lo deje vacio
+    val usuarios = listOf<UsuarioRolDto>()
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Usuarios con roles asignados", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        if (usuarios.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Endpoint pendiente del backend", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(usuarios) { usuario ->
+                    UsuarioRolCard(
+                        usuario = usuario,
+                        onRevocar = { /* endpoint de quitar rol*/ },
+                        onEliminar = { /*endpoint de borrar usuario */ }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UsuarioRolCard(usuario: UsuarioRolDto, onRevocar: () -> Unit, onEliminar: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(usuario.nombre, fontWeight = FontWeight.Bold)
+                    Text(usuario.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
+                    Text(text = usuario.rol, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onRevocar, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Revocar rol") }
+                Button(onClick = onEliminar, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") }
+            }
+        }
+    }
+}
+
+data class UsuarioRolDto(val id: Long, val nombre: String, val email: String, val rol: String)
+
 
 
 @Composable
 fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
-
     val context = LocalContext.current
-
     var user by remember { mutableStateOf<MeResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
     var mensaje by remember { mutableStateOf("") }
-
     var passwordActual by remember { mutableStateOf("") }
     var nuevaPassword by remember { mutableStateOf("") }
     var confirmarPassword by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-
         val api = Client.getClient(context).create(IAuthApi::class.java)
-
         api.getMe().enqueue(object : retrofit2.Callback<MeResponse> {
-
-            override fun onResponse(
-                call: retrofit2.Call<MeResponse>,
-                response: retrofit2.Response<MeResponse>
-            ) {
-                if (response.isSuccessful) {
-                    user = response.body()
-                } else {
-                    mensaje = "Error: ${response.code()}"
-                }
+            override fun onResponse(call: retrofit2.Call<MeResponse>, response: retrofit2.Response<MeResponse>) {
+                if (response.isSuccessful) user = response.body() else mensaje = "Error: ${response.code()}"
                 loading = false
             }
-
             override fun onFailure(call: retrofit2.Call<MeResponse>, t: Throwable) {
-                Log.e("PERFIL_ERROR", "Fallo", t)
-                mensaje = "Error de conexión"
-                loading = false
+                Log.e("PERFIL_ERROR", "Fallo", t); mensaje = "Error de conexión"; loading = false
             }
         })
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
-    ) {
-
-        Text(
-            text = "Perfil",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
+    Column(modifier = modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Top, horizontalAlignment = Alignment.Start) {
+        Text(text = "Perfil", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(24.dp))
 
         if (loading) {
             CircularProgressIndicator()
         } else {
             user?.let {
-
                 Text("Nombre: ${it.name}")
                 Text("Email: ${it.email}")
                 Text("Usuario: ${it.username}")
@@ -480,121 +422,55 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
                 Text("Fecha nacimiento: ${it.birthDate ?: "No disponible"}")
                 Text("Género: ${it.gender ?: "No disponible"}")
                 Text("Rol: ${it.role}")
-
-                if (it.stationId != null) {
-                    Text("Estación ID: ${it.stationId}")
-                }
+                if (it.stationId != null) Text("Estación ID: ${it.stationId}")
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Cambiar contraseña",
-            style = MaterialTheme.typography.titleMedium
-        )
-
+        Text(text = "Cambiar contraseña", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = passwordActual,
-            onValueChange = { passwordActual = it },
-            label = { Text("Contraseña actual") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = nuevaPassword,
-            onValueChange = { nuevaPassword = it },
-            label = { Text("Nueva contraseña") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = confirmarPassword,
-            onValueChange = { confirmarPassword = it },
-            label = { Text("Confirmar contraseña") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = passwordActual, onValueChange = { passwordActual = it }, label = { Text("Contraseña actual") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = nuevaPassword, onValueChange = { nuevaPassword = it }, label = { Text("Nueva contraseña") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = confirmarPassword, onValueChange = { confirmarPassword = it }, label = { Text("Confirmar contraseña") }, modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.height(16.dp))
 
         if (mensaje.isNotEmpty()) {
-            Text(
-                text = mensaje,
-                color = if (mensaje.startsWith("✓"))
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.error
-            )
+            Text(text = mensaje, color = if (mensaje.startsWith("✓")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
         }
 
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-
-                if (passwordActual.isEmpty()) {
-                    mensaje = "Ingresa la contraseña actual"
-                    return@Button
-                }
-
-                if (nuevaPassword != confirmarPassword) {
-                    mensaje = "Las contraseñas no coinciden"
-                    return@Button
-                }
-
+                if (passwordActual.isEmpty()) { mensaje = "Ingresa la contraseña actual"; return@Button }
+                if (nuevaPassword != confirmarPassword) { mensaje = "Las contraseñas no coinciden"; return@Button }
                 Thread {
                     try {
                         val api = Client.getClient(context).create(IAuthApi::class.java)
-
-                        val response = api.changePassword(
-                            ChangePasswordRequest(
-                                passwordActual,
-                                nuevaPassword
-                            )
-                        ).execute()
-
-                        println(response.code());
-
+                        val response = api.changePassword(ChangePasswordRequest(passwordActual, nuevaPassword)).execute()
                         if (response.isSuccessful) {
                             mensaje = "✓ Contraseña actualizada"
-
-                            passwordActual = ""
-                            nuevaPassword = ""
-                            confirmarPassword = ""
-
-                        } else {
-                            mensaje = "Error al actualizar contraseña"
-                        }
-
-                    } catch (e: Exception) {
-                        mensaje = "Error de conexión"
-                    }
+                            passwordActual = ""; nuevaPassword = ""; confirmarPassword = ""
+                        } else { mensaje = "Error al actualizar contraseña" }
+                    } catch (e: Exception) { mensaje = "Error de conexión" }
                 }.start()
             }
-        ) {
-            Text("Cambiar contraseña")
-        }
+        ) { Text("Cambiar contraseña") }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
             onClick = {
-
                 val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
-                prefs.edit {clear()}
-
+                prefs.edit { clear() }
                 val intent = Intent(context, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 context.startActivity(intent)
             }
-        ) {
-            Text("Cerrar sesión")
-        }
+        ) { Text("Cerrar sesión") }
     }
 }
 
