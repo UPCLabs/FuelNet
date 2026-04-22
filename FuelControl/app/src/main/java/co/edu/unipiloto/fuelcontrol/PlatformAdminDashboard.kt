@@ -42,7 +42,6 @@ enum class SuperAdminDestinations(
 ) {
     HOME("Inicio", Icons.Default.Home),
     SOLICITUDES("Solicitudes", Icons.Default.PersonAdd),
-    USUARIOS("Usuarios", Icons.Default.ManageAccounts),
     PERFIL("Perfil", Icons.Default.AccountBox)
 }
 
@@ -80,8 +79,6 @@ fun SuperAdminDashboardScreen() {
                     SuperAdminHomeScreen(modifier = Modifier.padding(innerPadding))
                 SuperAdminDestinations.SOLICITUDES ->
                     SolicitudesScreen(modifier = Modifier.padding(innerPadding))
-                SuperAdminDestinations.USUARIOS ->
-                    GestionUsuariosScreen(modifier = Modifier.padding(innerPadding))
                 SuperAdminDestinations.PERFIL ->
                     SuperAdminPerfilScreen(modifier = Modifier.padding(innerPadding))
             }
@@ -250,138 +247,6 @@ fun DetalleRow(label: String, value: String) {
         Text(text = value, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(0.6f))
     }
 }
-
-// Este es el gestor de usuarios mendiz
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun GestionUsuariosScreen(modifier: Modifier = Modifier) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Crear", "Usuarios activos")
-
-    Column(modifier = modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
-                Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
-            }
-        }
-        when (selectedTab) {
-            0 -> CrearUsuarioTab()
-            1 -> UsuariosActivosTab()
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CrearUsuarioTab() {
-    val context = LocalContext.current
-    var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var rolSeleccionado by remember { mutableStateOf("PRICE_ADMIN") }
-    var expandedRol by remember { mutableStateOf(false) }
-    var estado by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    val roles = listOf("PRICE_ADMIN", "INVENTORY_ADMIN")
-
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            Text("Crear usuario con rol", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre completo") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-
-            ExposedDropdownMenuBox(expanded = expandedRol, onExpandedChange = { expandedRol = !expandedRol }) {
-                OutlinedTextField(
-                    value = rolSeleccionado, onValueChange = {}, readOnly = true,
-                    label = { Text("Rol") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRol) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                )
-                ExposedDropdownMenu(expanded = expandedRol, onDismissRequest = { expandedRol = false }) {
-                    roles.forEach { rol -> DropdownMenuItem(text = { Text(rol) }, onClick = { rolSeleccionado = rol; expandedRol = false }) }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-
-            if (estado.isNotEmpty()) {
-                Text(text = estado, color = if (estado.startsWith("✓")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(8.dp))
-            }
-
-            Button(
-                onClick = {
-                    if (nombre.isEmpty() || email.isEmpty() || password.isEmpty()) { estado = "Completa todos los campos"; return@Button }
-                    isLoading = true
-                    //aqui deberia ir el endpoint mendiz
-                    estado = " "
-                    isLoading = false
-                },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("Crear usuario")
-            }
-        }
-    }
-}
-
-@Composable
-fun UsuariosActivosTab() {
-    // aqui otro endpoint lo deje vacio
-    val usuarios = listOf<UsuarioRolDto>()
-
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Usuarios con roles asignados", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        if (usuarios.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Endpoint pendiente del backend", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(usuarios) { usuario ->
-                    UsuarioRolCard(
-                        usuario = usuario,
-                        onRevocar = { /* endpoint de quitar rol*/ },
-                        onEliminar = { /*endpoint de borrar usuario */ }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun UsuarioRolCard(usuario: UsuarioRolDto, onRevocar: () -> Unit, onEliminar: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(usuario.nombre, fontWeight = FontWeight.Bold)
-                    Text(usuario.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
-                    Text(text = usuario.rol, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onSecondaryContainer)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onRevocar, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Revocar rol") }
-                Button(onClick = onEliminar, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") }
-            }
-        }
-    }
-}
-
-data class UsuarioRolDto(val id: Long, val nombre: String, val email: String, val rol: String)
-
 
 
 @Composable

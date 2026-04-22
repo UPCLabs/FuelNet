@@ -2,6 +2,8 @@ package co.edu.unipiloto.fuelcontrol.api.requests;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.List;
+
 public class MeResponse {
 
     @SerializedName("id")
@@ -31,6 +33,9 @@ public class MeResponse {
     @SerializedName("stationId")
     private Integer stationId;
 
+    @SerializedName("permissions")
+    private List<String> permissions;
+
 
     public Integer getId() { return id; }
 
@@ -49,4 +54,8 @@ public class MeResponse {
     public String getRole() { return role; }
 
     public Integer getStationId() { return stationId; }
+
+    public List<String> getPermissions() {
+        return permissions;
+    }
 }
