@@ -39,7 +39,7 @@ public class InventoryMovement {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registered_by")
-    private User registeredBy;
+    private StationUser registeredBy;
 
     @PrePersist
     public void prePersist() {

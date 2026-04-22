@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.fuelnet.fuelnet.dto.RegisterNotificationTokenDto;
 import com.fuelnet.fuelnet.models.DeviceToken;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IDeviceTokenRepository;
 
 import lombok.*;
@@ -21,7 +21,7 @@ public class NotificationController {
     @PostMapping("/register")
     public String registerToken(@RequestBody RegisterNotificationTokenDto request) {
 
-        User user = (User) SecurityContextHolder
+        StationUser user = (StationUser) SecurityContextHolder
                 .getContext()
                 .getAuthentication()
                 .getPrincipal();

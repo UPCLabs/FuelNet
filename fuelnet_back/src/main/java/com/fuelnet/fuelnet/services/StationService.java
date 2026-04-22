@@ -6,7 +6,7 @@ import com.fuelnet.fuelnet.enums.FuelType;
 import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.FuelTank;
 import com.fuelnet.fuelnet.models.Station;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IFuelPriceRepository;
 import com.fuelnet.fuelnet.repositories.IStationRepository;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -70,7 +70,7 @@ public class StationService {
         return stationRepository.findAll();
     }
 
-    public void updateFuelPrices(Long stationId, List<UpdateFuelPriceRequest> request, User admin) {
+    public void updateFuelPrices(Long stationId, List<UpdateFuelPriceRequest> request, StationUser admin) {
 
         Station station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Estación no encontrada"));

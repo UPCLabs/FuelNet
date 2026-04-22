@@ -1,7 +1,7 @@
 package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.*;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.services.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,24 +19,24 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<FuelTankResponse>> getDashboard(
-            @AuthenticationPrincipal User admin) {
+            @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(inventoryService.getDashboard(admin));
     }
 
     @PostMapping("/recharge")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<InventoryMovementResponse> recharge(
             @RequestBody RechargeRequest request,
-            @AuthenticationPrincipal User admin) {
+            @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(inventoryService.recharge(request, admin));
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<InventoryMovementResponse>> getHistory(
-            @AuthenticationPrincipal User admin) {
+            @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(inventoryService.getHistory(admin));
     }
 }

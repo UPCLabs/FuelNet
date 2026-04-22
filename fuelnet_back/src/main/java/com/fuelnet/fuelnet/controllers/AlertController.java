@@ -1,7 +1,7 @@
 package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.*;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.services.AlertService;
 import java.util.List;
 import java.util.Map;
@@ -19,39 +19,34 @@ public class AlertController {
     private final AlertService alertService;
 
     @GetMapping
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<List<AlertResponse>> getAlerts(
-        @AuthenticationPrincipal User admin
-    ) {
+            @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(alertService.getAlerts(admin));
     }
 
     @GetMapping("/unread-count")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Map<String, Long>> getUnreadCount(
-        @AuthenticationPrincipal User admin
-    ) {
+            @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(
-            Map.of("count", alertService.getUnreadCount(admin))
-        );
+                Map.of("count", alertService.getUnreadCount(admin)));
     }
 
     @PatchMapping("/{id}/read")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Void> markAsRead(
-        @PathVariable Long id,
-        @AuthenticationPrincipal User admin
-    ) {
+            @PathVariable Long id,
+            @AuthenticationPrincipal StationUser admin) {
         alertService.markAsRead(id, admin);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/threshold")
-    @PreAuthorize("hasRole('STATION_ADMIN')")
+    @PreAuthorize("hasAuthority('MANAGE_INVENTORY')")
     public ResponseEntity<Void> updateThreshold(
-        @RequestBody ThresholdRequest request,
-        @AuthenticationPrincipal User admin
-    ) {
+            @RequestBody ThresholdRequest request,
+            @AuthenticationPrincipal StationUser admin) {
         alertService.updateThreshold(request, admin);
         return ResponseEntity.ok().build();
     }

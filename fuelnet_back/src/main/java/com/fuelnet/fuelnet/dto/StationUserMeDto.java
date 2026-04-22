@@ -1,15 +1,15 @@
 package com.fuelnet.fuelnet.dto;
 
-import com.fuelnet.fuelnet.enums.UserRole;
-import lombok.Builder;
-import lombok.Data;
-
 import java.time.LocalDate;
+import java.util.List;
+
+import com.fuelnet.fuelnet.enums.UserRole;
+
+import lombok.*;
 
 @Data
 @Builder
-public class UserMeDto {
-
+public class StationUserMeDto {
     private Long id;
     private String name;
     private String email;
@@ -19,4 +19,6 @@ public class UserMeDto {
     private String gender;
     private UserRole role;
     private Long stationId;
+
+    private List<String> permissions;
 }

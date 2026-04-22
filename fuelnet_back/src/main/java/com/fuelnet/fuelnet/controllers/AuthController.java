@@ -1,20 +1,24 @@
 package com.fuelnet.fuelnet.controllers;
 
 import com.fuelnet.fuelnet.dto.AdminRegisterRequest;
+import com.fuelnet.fuelnet.dto.AppUserMeDto;
+import com.fuelnet.fuelnet.dto.CreateEmployeeDto;
 import com.fuelnet.fuelnet.dto.LoginRequestDto;
 import com.fuelnet.fuelnet.dto.LoginResponseDto;
 import com.fuelnet.fuelnet.dto.SignupRequestDto;
 import com.fuelnet.fuelnet.dto.SignupResponseDto;
-import com.fuelnet.fuelnet.dto.UserMeDto;
+import com.fuelnet.fuelnet.dto.StationUserMeDto;
+import com.fuelnet.fuelnet.enums.PendingUserType;
+import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.PendingUser;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
-import com.fuelnet.fuelnet.repositories.IUserRepository;
 import com.fuelnet.fuelnet.services.AuthService;
 
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -34,11 +38,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final IUserRepository userRepository;
     private final IPendingUsersRepository pendingUsersRepository;
 
-    private UserMeDto toDto(User user) {
-        return UserMeDto.builder()
+    private StationUserMeDto toStationDto(StationUser user) {
+        return StationUserMeDto.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
@@ -48,14 +51,38 @@ public class AuthController {
                 .gender(user.getGender())
                 .role(user.getRole())
                 .stationId(user.getStation() != null ? user.getStation().getId() : null)
+                .permissions(user.getPermissions() != null
+                        ? user.getPermissions()
+                                .stream()
+                                .map(Enum::name)
+                                .toList()
+                        : List.of())
+                .build();
+    }
+
+    private AppUserMeDto toAppUserDto(AppUser user) {
+        return AppUserMeDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .address(user.getAddress())
+                .birthDate(user.getBirthDate())
+                .gender(user.getGender())
                 .build();
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-        UserMeDto dto = toDto(user);
+    public ResponseEntity<?> me(@AuthenticationPrincipal Object user) {
 
-        return ResponseEntity.ok(dto);
+        if (user instanceof StationUser stationUser) {
+            return ResponseEntity.ok(toStationDto(stationUser));
+        }
+
+        if (user instanceof AppUser appUser) {
+            return ResponseEntity.ok(toAppUserDto(appUser));
+        }
+
+        return ResponseEntity.status(401).build();
     }
 
     @PostMapping("/register")
@@ -79,7 +106,11 @@ public class AuthController {
             throw new RuntimeException("Token expired");
         }
 
-        authService.createUserFromPending(pendingUser);
+        if (pendingUser.getType() == PendingUserType.CUSTOMER) {
+            authService.createAppUserFromPending(pendingUser);
+        } else {
+            authService.createStationUserFromPending(pendingUser);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", "Tu cuenta ya fue verificada, inicia sesión"));
@@ -104,7 +135,17 @@ public class AuthController {
             LoginResponseDto response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @PostMapping("/create-employee")
+    @PreAuthorize("hasRole('STATION_ADMIN')")
+    public ResponseEntity<StationUser> createUser(
+            @RequestBody CreateEmployeeDto request,
+            @AuthenticationPrincipal StationUser admin) {
+        return ResponseEntity.ok(
+                authService.createEmployee(request, admin));
     }
 }

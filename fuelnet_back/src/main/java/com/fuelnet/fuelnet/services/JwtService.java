@@ -1,6 +1,7 @@
 package com.fuelnet.fuelnet.services;
 
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.AppUser;
+import com.fuelnet.fuelnet.models.StationUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -11,44 +12,61 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
-    private final String SECRET_KEY =
-        "super_secret_key_that_is_long_enough_123456";
+    private final String SECRET_KEY = "super_secret_key_that_is_long_enough_123456";
 
-    public String generateToken(User user) {
+    public String generateToken(StationUser user) {
         return Jwts.builder()
-            .setSubject(user.getEmail())
-            .claim("role", user.getRole().name())
-            .setIssuedAt(new Date())
-            .setExpiration(
-                new Date(System.currentTimeMillis() + 1000 * 60 * 60)
-            )
-            .signWith(
-                Keys.hmacShaKeyFor(SECRET_KEY.getBytes()),
-                SignatureAlgorithm.HS256
-            )
-            .compact();
+                .setSubject(user.getEmail())
+                .claim("type", "STATION_USER")
+                .claim("role", user.getRole().name())
+                .setIssuedAt(new Date())
+                .setExpiration(
+                        new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .signWith(
+                        Keys.hmacShaKeyFor(SECRET_KEY.getBytes()),
+                        SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String generateTokenForAppUser(AppUser user) {
+        return Jwts.builder()
+                .setSubject(user.getEmail())
+                .claim("type", "APP_USER")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .signWith(
+                        Keys.hmacShaKeyFor(SECRET_KEY.getBytes()),
+                        SignatureAlgorithm.HS256)
+                .compact();
     }
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-            .setSigningKey(SECRET_KEY.getBytes())
-            .build()
-            .parseClaimsJws(token)
-            .getBody();
+                .setSigningKey(SECRET_KEY.getBytes())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
-    public boolean isTokenValid(String token, User user) {
-        return (
-            extractUsername(token).equals(user.getEmail()) &&
-            !isTokenExpired(token)
-        );
+    public String extractUserType(String token) {
+        return extractAllClaims(token).get("type", String.class);
+    }
+
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    public boolean isTokenValid(String token, String email) {
+        return (extractUsername(token).equals(email) &&
+                !isTokenExpired(token));
     }
 
     private boolean isTokenExpired(String token) {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
+
 }

@@ -3,18 +3,19 @@ package com.fuelnet.fuelnet.services;
 import com.fuelnet.fuelnet.dto.*;
 import com.fuelnet.fuelnet.enums.FuelType;
 import com.fuelnet.fuelnet.enums.PaymentStatus;
+import com.fuelnet.fuelnet.models.AppUser;
 import com.fuelnet.fuelnet.models.FuelAlert;
 import com.fuelnet.fuelnet.models.FuelTank;
 import com.fuelnet.fuelnet.models.InventoryMovement;
 import com.fuelnet.fuelnet.models.Payment;
 import com.fuelnet.fuelnet.models.TankThreshold;
-import com.fuelnet.fuelnet.models.User;
+import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IFuelAlertRepository;
 import com.fuelnet.fuelnet.repositories.IFuelTankRepository;
 import com.fuelnet.fuelnet.repositories.IInventoryMovementRepository;
 import com.fuelnet.fuelnet.repositories.IPaymentRepository;
 import com.fuelnet.fuelnet.repositories.ITankThresholdRepository;
-import com.fuelnet.fuelnet.repositories.IUserRepository;
+import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,7 +30,7 @@ public class PaymentService {
     private final IPaymentRepository paymentRepository;
     private final IFuelTankRepository tankRepository;
     private final IInventoryMovementRepository inventoryMovementRepository;
-    private final IUserRepository userRepository;
+    private final IStationUserRepository userRepository;
     private final IFuelAlertRepository alertRepository;
     private final ITankThresholdRepository thresholdRepository;
     private final EmailService emailService;
@@ -37,8 +38,8 @@ public class PaymentService {
 
     public PaymentResponse createPayment(
             CreatePaymentRequest request,
-            User admin) {
-        User client;
+            StationUser admin) {
+        StationUser client;
         if (request.getUserEmail() != null) {
             client = userRepository
                     .findByEmail(request.getUserEmail())
@@ -100,7 +101,7 @@ public class PaymentService {
         return toResponse(saved);
     }
 
-    public List<PaymentResponse> getPaymentsByAdmin(User admin) {
+    public List<PaymentResponse> getPaymentsByAdmin(StationUser admin) {
         return paymentRepository
                 .findByCreatedById(admin.getId())
                 .stream()
@@ -108,7 +109,7 @@ public class PaymentService {
                 .collect(Collectors.toList());
     }
 
-    public List<PaymentResponse> getMyPayments(User client) {
+    public List<PaymentResponse> getMyPayments(AppUser client) {
         return paymentRepository
                 .findByUserId(client.getId())
                 .stream()
@@ -118,7 +119,7 @@ public class PaymentService {
 
     public PaymentSummaryResponse getPaymentSummary(
             Long paymentId,
-            User client) {
+            AppUser client) {
         Payment payment = getPaymentForClient(paymentId, client);
 
         return PaymentSummaryResponse.builder()
@@ -131,7 +132,7 @@ public class PaymentService {
                 .build();
     }
 
-    public PaymentResponse processPayment(Long paymentId, User client) {
+    public PaymentResponse processPayment(Long paymentId, AppUser client) {
         Payment payment = getPaymentForClient(paymentId, client);
 
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -160,7 +161,7 @@ public class PaymentService {
         return toResponse(saved);
     }
 
-    public PaymentResponse cancelPayment(Long paymentId, User admin) {
+    public PaymentResponse cancelPayment(Long paymentId, StationUser admin) {
         Payment payment = paymentRepository
                 .findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
@@ -183,7 +184,7 @@ public class PaymentService {
         return toResponse(saved);
     }
 
-    private Payment getPaymentForClient(Long paymentId, User client) {
+    private Payment getPaymentForClient(Long paymentId, AppUser client) {
         Payment payment = paymentRepository
                 .findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
@@ -194,7 +195,7 @@ public class PaymentService {
         return payment;
     }
 
-    private void checkAndGenerateAlert(FuelTank tank, User admin) {
+    private void checkAndGenerateAlert(FuelTank tank, StationUser admin) {
         BigDecimal threshold = thresholdRepository
                 .findByTankId(tank.getId())
                 .map(TankThreshold::getThresholdPercentage)
