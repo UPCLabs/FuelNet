@@ -63,6 +63,10 @@
 
         <activity android:name=".AdminDashboardActivity" />
 
+
+        <activity android:name=".laboratories.EncomendaActivity" />
+        <activity android:name=".laboratories.DetalleEncomendaActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

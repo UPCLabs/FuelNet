@@ -14,6 +14,8 @@ import android.widget.Button;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import co.edu.unipiloto.fuelcontrol.laboratories.EncomendaActivity;
+
 public class InicioActivity extends AppCompatActivity {
 
     @Override
@@ -35,6 +37,12 @@ public class InicioActivity extends AppCompatActivity {
 
         Button btnLogin = findViewById(R.id.btnLogin);
         Button btnRegister = findViewById(R.id.btnRegister);
+        Button btnEncomiendas = findViewById(R.id.btnEncomiendas);
+
+        btnEncomiendas.setOnClickListener(v -> {
+            Intent intent = new Intent(InicioActivity.this, EncomendaActivity.class);
+            startActivity(intent);
+        });
 
         btnLogin.setOnClickListener(v -> {
             Intent intent = new Intent(InicioActivity.this, MainActivity.class);
