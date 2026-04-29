@@ -20,11 +20,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Pending
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
@@ -99,6 +101,7 @@ class DashboardActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FuelControlApp() {
 
@@ -125,7 +128,38 @@ fun FuelControlApp() {
             Client.getClient(context).create(IStationApi::class.java)
         }
 
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = currentDestination.label,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    when (currentDestination) {
+                        AppDestinations.MAPA -> {
+                            IconButton(onClick = { /* futuro: filtro de combustible */ }) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = "Filtrar"
+                                )
+                            }
+                        }
+                        AppDestinations.PAGOS -> {
+                            IconButton(onClick = { /* futuro: historial */ }) {
+                                Icon(
+                                    imageVector = Icons.Default.Receipt,
+                                    contentDescription = "Historial"
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+            )
+        }) { innerPadding ->
 
             when (currentDestination) {
 

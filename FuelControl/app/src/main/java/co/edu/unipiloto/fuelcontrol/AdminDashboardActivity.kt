@@ -46,8 +46,11 @@ import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ManageAccounts
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -157,6 +160,8 @@ fun AdminDashboardScreen() {
         }
     }
 
+    var historialActual by remember { mutableStateOf<List<InventoryMovementResponse>>(emptyList()) }
+
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             allowedDestinations.forEach {
@@ -169,14 +174,57 @@ fun AdminDashboardScreen() {
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Scaffold(modifier = Modifier.fillMaxSize(),topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = currentDestination.label,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    when (currentDestination) {
+                        AdminDestinations.INVENTARIO -> {
+                            IconButton(
+                                onClick = { generarPDF(context, historialActual) },
+                                enabled = historialActual.isNotEmpty()
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = "Exportar PDF")
+                            }
+                        }
+                        AdminDestinations.USUARIOS -> {
+                            IconButton(onClick = { }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Buscar"
+                                )
+                            }
+                        }
+                        AdminDestinations.FACTURAS -> {
+                            IconButton(onClick = { }) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = "Filtrar"
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+            )
+        }) { innerPadding ->
             when (currentDestination) {
                 AdminDestinations.INICIO ->
                     InicioScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.USUARIOS ->
                     GestionUsuariosScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.FACTURAS -> FacturasScreen(modifier = Modifier.padding(innerPadding))
-                AdminDestinations.INVENTARIO -> InventarioScreen(modifier = Modifier.padding(innerPadding))
+                AdminDestinations.INVENTARIO ->
+                    InventarioScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        onHistorialCargado = { historialActual = it }
+                    )
                 AdminDestinations.ALERTAS -> NotificacionesScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.PRECIOS -> PreciosScreen(modifier = Modifier.padding(innerPadding))
                 AdminDestinations.PERFIL -> PerfilAdminScreen(modifier = Modifier.padding(innerPadding))
@@ -1117,9 +1165,12 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun InventarioScreen(modifier: Modifier = Modifier) {
+fun InventarioScreen(modifier: Modifier = Modifier, onHistorialCargado: (List<InventoryMovementResponse>) -> Unit = {}) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Niveles", "Recargas", "Historial")
+    val context = LocalContext.current
+
+    var historialParaExportar by remember { mutableStateOf<List<InventoryMovementResponse>>(emptyList()) }
 
     Column(modifier = modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
@@ -1134,11 +1185,13 @@ fun InventarioScreen(modifier: Modifier = Modifier) {
         when (selectedTab) {
             0 -> NivelesTab()
             1 -> RecargasTab()
-            2 -> HistorialTab()
+            2 -> HistorialTab(onExportar = {
+                historialParaExportar = it
+                onHistorialCargado(it)
+            })
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PreciosScreen(modifier: Modifier = Modifier) {
@@ -1503,8 +1556,81 @@ fun RecargasTab() {
     }
 }
 
+fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
+    val document = PdfDocument()
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+    val page = document.startPage(pageInfo)
+    val canvas = page.canvas
+    val paint = Paint()
+
+    // Título
+    paint.textSize = 20f
+    paint.isFakeBoldText = true
+    canvas.drawText("Historial de Movimientos de Inventario", 40f, 60f, paint)
+
+    // Fecha de generación (no se si funciona)
+    paint.textSize = 12f
+    paint.isFakeBoldText = false
+    paint.color = Color.GRAY
+    canvas.drawText("Generado: ${
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(
+            Date()
+        )}", 40f, 85f, paint)
+
+    // Línea separadora
+    paint.color = Color.BLACK
+    paint.strokeWidth = 1f
+    canvas.drawLine(40f, 95f, 555f, 95f, paint)
+
+    // Encabezados
+    paint.isFakeBoldText = true
+    paint.textSize = 13f
+    canvas.drawText("Tipo", 40f, 120f, paint)
+    canvas.drawText("Proveedor", 160f, 120f, paint)
+    canvas.drawText("Cantidad", 340f, 120f, paint)
+    canvas.drawText("Fecha", 440f, 120f, paint)
+    canvas.drawLine(40f, 128f, 555f, 128f, paint)
+
+    // deberian verse las filas
+    paint.isFakeBoldText = false
+    paint.textSize = 12f
+    var y = 150f
+    historial.forEach { mov ->
+        canvas.drawText(mov.fuelType, 40f, y, paint)
+        canvas.drawText(mov.supplier ?: "Venta", 160f, y, paint)
+        canvas.drawText("${mov.gallonsAdded.toInt()} gal", 340f, y, paint)
+        canvas.drawText(mov.rechargeDate.take(10), 440f, y, paint)
+        y += 30f
+    }
+
+    canvas.drawLine(40f, y + 5f, 555f, y + 5f, paint)
+    document.finishPage(page)
+
+    try {
+        val fileName = "inventario_${System.currentTimeMillis()}.pdf"
+        val file = File(context.getExternalFilesDir(null), fileName)
+        document.writeTo(FileOutputStream(file))
+        document.close()
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(intent)
+        Toast.makeText(context, "PDF generado correctamente", Toast.LENGTH_SHORT).show()
+
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error al generar PDF", Toast.LENGTH_SHORT).show()
+    }
+}
+
 @Composable
-fun HistorialTab() {
+fun HistorialTab(onExportar: (List<InventoryMovementResponse>) -> Unit = {}) {
     val context = LocalContext.current
     val token = "Bearer " + (context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
         .getString("token", "") ?: "")
@@ -1519,6 +1645,7 @@ fun HistorialTab() {
             override fun onResponse(call: Call<List<InventoryMovementResponse>>, response: Response<List<InventoryMovementResponse>>) {
                 if (response.isSuccessful && response.body() != null) {
                     historial = response.body()!!
+                    onExportar(historial)
                 } else {
                     error = "Error al cargar historial (${response.code()})"
                 }
@@ -1559,118 +1686,18 @@ fun HistorialTab() {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(mov.fuelType, fontWeight = FontWeight.Bold)
-                            Text(
-                                "Proveedor: ${mov.supplier ?: "Venta"}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Fecha: ${mov.rechargeDate.take(10)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (mov.notes != null) {
-                                Text(
-                                    mov.notes,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text("Proveedor: ${mov.supplier ?: "Venta"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Fecha: ${mov.rechargeDate.take(10)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (mov.notes != null) Text(mov.notes, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
-                            text = if (mov.gallonsAdded >= 0) "+${mov.gallonsAdded.toInt()} gal"
-                            else "${mov.gallonsAdded.toInt()} gal",
+                            text = if (mov.gallonsAdded >= 0) "+${mov.gallonsAdded.toInt()} gal" else "${mov.gallonsAdded.toInt()} gal",
                             fontWeight = FontWeight.Bold,
-                            color = if (mov.gallonsAdded >= 0) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
+                            color = if (mov.gallonsAdded >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
                     }
                 }
             }
-            fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
-                val document = PdfDocument()
-                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-                val page = document.startPage(pageInfo)
-                val canvas = page.canvas
-                val paint = Paint()
-
-                // Título
-                paint.textSize = 20f
-                paint.isFakeBoldText = true
-                canvas.drawText("Historial de Movimientos de Inventario", 40f, 60f, paint)
-
-                // Fecha de generación (no se si funciona)
-                paint.textSize = 12f
-                paint.isFakeBoldText = false
-                paint.color = Color.GRAY
-                canvas.drawText("Generado: ${
-                    SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(
-                        Date()
-                    )}", 40f, 85f, paint)
-
-                // Línea separadora
-                paint.color = Color.BLACK
-                paint.strokeWidth = 1f
-                canvas.drawLine(40f, 95f, 555f, 95f, paint)
-
-                // Encabezados
-                paint.isFakeBoldText = true
-                paint.textSize = 13f
-                canvas.drawText("Tipo", 40f, 120f, paint)
-                canvas.drawText("Proveedor", 160f, 120f, paint)
-                canvas.drawText("Cantidad", 340f, 120f, paint)
-                canvas.drawText("Fecha", 440f, 120f, paint)
-                canvas.drawLine(40f, 128f, 555f, 128f, paint)
-
-                // deberian verse las filas
-                paint.isFakeBoldText = false
-                paint.textSize = 12f
-                var y = 150f
-                historial.forEach { mov ->
-                    canvas.drawText(mov.fuelType, 40f, y, paint)
-                    canvas.drawText(mov.supplier ?: "Venta", 160f, y, paint)
-                    canvas.drawText("${mov.gallonsAdded.toInt()} gal", 340f, y, paint)
-                    canvas.drawText(mov.rechargeDate.take(10), 440f, y, paint)
-                    y += 30f
-                }
-
-                canvas.drawLine(40f, y + 5f, 555f, y + 5f, paint)
-                document.finishPage(page)
-
-                try {
-                    val fileName = "inventario_${System.currentTimeMillis()}.pdf"
-                    val file = File(context.getExternalFilesDir(null), fileName)
-                    document.writeTo(FileOutputStream(file))
-                    document.close()
-
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        file
-                    )
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/pdf")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    context.startActivity(intent)
-                    Toast.makeText(context, "PDF generado correctamente", Toast.LENGTH_SHORT).show()
-
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Error al generar PDF", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-           //deberia pedir la app de pdf del celu
-            item {
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { generarPDF(context, historial) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Exportar PDF")
-                }
-            }
         }
     }
-
 }
