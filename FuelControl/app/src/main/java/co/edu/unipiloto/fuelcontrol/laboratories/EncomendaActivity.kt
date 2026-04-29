@@ -276,7 +276,7 @@ fun EncomendaScreen() {
                         )
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
