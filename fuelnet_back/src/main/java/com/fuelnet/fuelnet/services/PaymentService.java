@@ -10,6 +10,7 @@ import com.fuelnet.fuelnet.models.InventoryMovement;
 import com.fuelnet.fuelnet.models.Payment;
 import com.fuelnet.fuelnet.models.TankThreshold;
 import com.fuelnet.fuelnet.models.StationUser;
+import com.fuelnet.fuelnet.repositories.IAppUserRepository;
 import com.fuelnet.fuelnet.repositories.IFuelAlertRepository;
 import com.fuelnet.fuelnet.repositories.IFuelTankRepository;
 import com.fuelnet.fuelnet.repositories.IInventoryMovementRepository;
@@ -30,7 +31,7 @@ public class PaymentService {
     private final IPaymentRepository paymentRepository;
     private final IFuelTankRepository tankRepository;
     private final IInventoryMovementRepository inventoryMovementRepository;
-    private final IStationUserRepository userRepository;
+    private final IAppUserRepository appUserRepository;
     private final IFuelAlertRepository alertRepository;
     private final ITankThresholdRepository thresholdRepository;
     private final EmailService emailService;
@@ -39,15 +40,15 @@ public class PaymentService {
     public PaymentResponse createPayment(
             CreatePaymentRequest request,
             StationUser admin) {
-        StationUser client;
+        AppUser client;
         if (request.getUserEmail() != null) {
-            client = userRepository
+            client = appUserRepository
                     .findByEmail(request.getUserEmail())
                     .orElseThrow(() -> new RuntimeException(
                             "Usuario no encontrado con email: " +
                                     request.getUserEmail()));
         } else if (request.getUserId() != null) {
-            client = userRepository
+            client = appUserRepository
                     .findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException(
                             "Usuario no encontrado con ID: " + request.getUserId()));
@@ -89,7 +90,7 @@ public class PaymentService {
                 .levelAfter(tank.getCurrentLevelGallons())
                 .supplier("Venta")
                 .notes("Pago #" + saved.getId())
-                .registeredBy(saved.getUser())
+                .registeredBy(saved.getCreatedBy())
                 .build();
         inventoryMovementRepository.save(movement);
 
