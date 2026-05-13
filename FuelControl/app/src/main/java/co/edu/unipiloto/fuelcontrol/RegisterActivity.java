@@ -1,6 +1,7 @@
 package co.edu.unipiloto.fuelcontrol;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -34,6 +35,7 @@ public class RegisterActivity extends AppCompatActivity {
     FusedLocationProviderClient fusedLocationClient;
     int anioNacimiento = 0, mesNacimiento = 0, diaNacimiento = 0;
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

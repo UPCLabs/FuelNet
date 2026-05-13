@@ -13,6 +13,7 @@ activityCompose = "1.12.4"
 kotlin = "2.3.10"
 composeBom = "2026.02.01"
 uiText = "1.10.6"
+pdfInk = "1.0.0-alpha18"
 
 [libraries]
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
@@ -36,6 +37,7 @@ ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
 material3-adaptive-navigation-suite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite" }
 ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
+pdf-ink = { group = "androidx.pdf", name = "pdf-ink", version.ref = "pdfInk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
 import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.api.IPaymentApi

@@ -1,6 +1,9 @@
 server:
   port: 3015
 spring:
+  task:
+    scheduling:
+      enabled: true
   application:
     name: fuelnet
   datasource:
@@ -22,3 +25,8 @@ spring:
           starttls:
             enable: true
             required: true
+scraper:
+  python:
+    path: /usr/bin/python3
+  script:
+    path: /app/price_scraping.py

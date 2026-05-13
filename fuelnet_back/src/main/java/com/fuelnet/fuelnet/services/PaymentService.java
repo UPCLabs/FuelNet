@@ -16,7 +16,6 @@ import com.fuelnet.fuelnet.repositories.IFuelTankRepository;
 import com.fuelnet.fuelnet.repositories.IInventoryMovementRepository;
 import com.fuelnet.fuelnet.repositories.IPaymentRepository;
 import com.fuelnet.fuelnet.repositories.ITankThresholdRepository;
-import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;

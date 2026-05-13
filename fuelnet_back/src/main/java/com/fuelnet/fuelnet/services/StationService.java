@@ -1,13 +1,16 @@
 package com.fuelnet.fuelnet.services;
 
+import com.fuelnet.fuelnet.dto.FuelPriceDto;
 import com.fuelnet.fuelnet.dto.StationCreationRequestDto;
 import com.fuelnet.fuelnet.dto.UpdateFuelPriceRequest;
 import com.fuelnet.fuelnet.enums.FuelType;
 import com.fuelnet.fuelnet.models.FuelPrice;
 import com.fuelnet.fuelnet.models.FuelTank;
+import com.fuelnet.fuelnet.models.PriceRegulated;
 import com.fuelnet.fuelnet.models.Station;
 import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IFuelPriceRepository;
+import com.fuelnet.fuelnet.repositories.IPriceRegulatedRepository;
 import com.fuelnet.fuelnet.repositories.IStationRepository;
 import com.google.firebase.messaging.FirebaseMessagingException;
 
@@ -24,6 +27,7 @@ public class StationService {
     private final IStationRepository stationRepository;
     private final IFuelPriceRepository fuelPriceRepository;
     private final NotificationService notificationService;
+    private final IPriceRegulatedRepository priceRegulatedRepository;
 
     public Optional<Station> getStationById(Long id) {
         return stationRepository.findById(id);
@@ -34,6 +38,31 @@ public class StationService {
     }
 
     public Station registerStation(StationCreationRequestDto request) {
+        PriceRegulated regulated = priceRegulatedRepository
+                .findTopByOrderByFetchedAtDesc()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No hay precios regulados registrados. Intente más tarde."));
+
+        for (FuelPriceDto fuelDto : request.getFuels()) {
+            String type = fuelDto.getType().toUpperCase();
+            Double submitted = fuelDto.getPrice();
+
+            switch (type) {
+                case "CORRIENTE" -> {
+                    if (submitted > regulated.getCorriente()) {
+                        throw new RuntimeException(
+                                "corriente: " + submitted + regulated.getCorriente());
+                    }
+                }
+                case "DIESEL" -> {
+                    if (submitted > regulated.getDiesel()) {
+                        throw new RuntimeException(
+                                "diesel" + submitted + regulated.getDiesel());
+                    }
+                }
+            }
+        }
+
         Station station = Station.builder()
                 .name(request.getName())
                 .address(request.getAddress())
@@ -74,6 +103,31 @@ public class StationService {
 
         Station station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new RuntimeException("Estación no encontrada"));
+
+        PriceRegulated regulated = priceRegulatedRepository
+                .findTopByOrderByFetchedAtDesc()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No hay precios regulados registrados. Intente más tarde."));
+
+        for (UpdateFuelPriceRequest r : request) {
+            String type = r.getFuelType().toUpperCase();
+            Double submitted = r.getPrice();
+
+            switch (type) {
+                case "CORRIENTE" -> {
+                    if (submitted > regulated.getCorriente()) {
+                        throw new RuntimeException(
+                                "corriente: " + submitted + regulated.getCorriente());
+                    }
+                }
+                case "DIESEL" -> {
+                    if (submitted > regulated.getDiesel()) {
+                        throw new RuntimeException(
+                                "diesel" + submitted + regulated.getDiesel());
+                    }
+                }
+            }
+        }
 
         List<FuelPrice> prices = fuelPriceRepository.findByStationId(stationId);
 

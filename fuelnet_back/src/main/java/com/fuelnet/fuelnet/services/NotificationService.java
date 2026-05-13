@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class NotificationService {
     private final IDeviceTokenRepository tokenRepository;
+    private static final String DEFAULT_TOPIC = "fuelnet_general";
 
     public String sendToUser(Long userId, String title, String body) {
 
@@ -97,4 +98,32 @@ public class NotificationService {
 
         return FirebaseMessaging.getInstance().send(message);
     }
+
+    public String sendToDefaultTopic(String title, String body)
+            throws FirebaseMessagingException {
+
+        Message message = Message.builder()
+                .setTopic(DEFAULT_TOPIC)
+                .setNotification(Notification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build())
+                .build();
+
+        return FirebaseMessaging.getInstance().send(message);
+    }
+
+    public String sendPriceUpdate(String circular, String url) throws FirebaseMessagingException {
+        Message message = Message.builder()
+                .setTopic(DEFAULT_TOPIC)
+                .setNotification(Notification.builder()
+                        .setTitle("📋 Nueva regulación de precios")
+                        .setBody("La CREG publicó " + circular + ". Verifique los precios nuevos!.")
+                        .build())
+                .putData("type", "price_update")
+                .putData("url", url)
+                .build();
+        return FirebaseMessaging.getInstance().send(message);
+    }
+
 }

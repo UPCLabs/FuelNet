@@ -33,6 +33,15 @@ public class InicioActivity extends AppCompatActivity {
             NotificationHelper.createChannel(this);
         }
 
+        FirebaseMessaging.getInstance().subscribeToTopic("fuelnet_general")
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("FCM", "Suscrito a fuelnet_general");
+                    } else {
+                        Log.e("FCM", "Error al suscribirse", task.getException());
+                    }
+                });
+
         Button btnLogin = findViewById(R.id.btnLogin);
         Button btnRegister = findViewById(R.id.btnRegister);
 

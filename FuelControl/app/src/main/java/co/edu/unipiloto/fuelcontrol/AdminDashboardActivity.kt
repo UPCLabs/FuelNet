@@ -11,9 +11,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
@@ -32,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.api.requests.CreatePaymentRequest
-import co.edu.unipiloto.fuelcontrol.models.PaymentSummaryResponse
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -46,17 +47,22 @@ import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.RechargeRequest
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.FileProvider
 import co.edu.unipiloto.fuelcontrol.api.IEmployeeApi
+import co.edu.unipiloto.fuelcontrol.api.IPriceApi
 import co.edu.unipiloto.fuelcontrol.api.IStationApi
+import co.edu.unipiloto.fuelcontrol.api.PriceRegulatedResponse
 import co.edu.unipiloto.fuelcontrol.api.UpdateFuelPriceRequest
 import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
 import co.edu.unipiloto.fuelcontrol.api.requests.CreateEmployeeRequest
@@ -69,6 +75,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -1197,27 +1204,49 @@ fun InventarioScreen(modifier: Modifier = Modifier, onHistorialCargado: (List<In
 fun PreciosScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
-    val api = Client.getClient(context).create(IStationApi::class.java)
-    val scope = rememberCoroutineScope()
+    val stationApi = Client.getClient(context).create(IStationApi::class.java)
+    val priceApi   = Client.getClient(context).create(IPriceApi::class.java)
+    val scope      = rememberCoroutineScope()
 
-    var precio by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("CORRIENTE") }
-    var expanded by remember { mutableStateOf(false) }
-    var estado by remember { mutableStateOf("") }
-    var loading by remember { mutableStateOf(false) }
+    var precio    by remember { mutableStateOf("") }
+    var tipo      by remember { mutableStateOf("CORRIENTE") }
+    var expanded  by remember { mutableStateOf(false) }
+    var estado    by remember { mutableStateOf("") }
+    var loading   by remember { mutableStateOf(false) }
 
-    var preciosActuales by remember { mutableStateOf<List<FuelPriceDto>>(emptyList()) }
-    var loadingPrecios by remember { mutableStateOf(true) }
+    var preciosActuales  by remember { mutableStateOf<List<FuelPriceDto>>(emptyList()) }
+    var loadingPrecios   by remember { mutableStateOf(true) }
+    var precioRegulado   by remember { mutableStateOf<PriceRegulatedResponse?>(null) }
 
     val combustibles = listOf("CORRIENTE", "EXTRA", "DIESEL")
 
+    val limiteActual: Int? = when (tipo) {
+        "CORRIENTE" -> precioRegulado?.corriente
+        "DIESEL"    -> precioRegulado?.diesel
+        else        -> null
+    }
+
+    val precioDouble   = precio.toDoubleOrNull()
+    val superaLimite   = limiteActual != null && precioDouble != null && precioDouble > limiteActual
+    val precioValido   = precioDouble != null && !superaLimite
+
     LaunchedEffect(Unit) {
         try {
-            preciosActuales = api.getMyPrices()
+            preciosActuales = stationApi.getMyPrices()
         } catch (e: Exception) {
-           Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Error cargando precios", Toast.LENGTH_SHORT).show()
         }
         loadingPrecios = false
+
+        try {
+            val call = priceApi.getCurrentPrices()
+            val response = withContext(Dispatchers.IO) { call.execute() }
+            if (response.isSuccessful) {
+                precioRegulado = response.body()
+            }
+        } catch (e: Exception) {
+            Log.e("PRICES", "No se pudo cargar precio regulado: ${e.message}")
+        }
     }
 
     Column(
@@ -1233,19 +1262,16 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
         ) {
-            val fillMaxWidth = Modifier.fillMaxWidth()
             OutlinedTextField(
                 value = tipo,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Tipo de combustible") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded)
-                },
-                modifier = fillMaxWidth.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
             )
-
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
@@ -1255,6 +1281,7 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
                         text = { Text(it) },
                         onClick = {
                             tipo = it
+                            estado = ""
                             expanded = false
                         }
                     )
@@ -1262,43 +1289,95 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
             }
         }
 
+        AnimatedVisibility(visible = limiteActual != null) {
+            limiteActual?.let { limite ->
+                val formato = NumberFormat.getNumberInstance(Locale("es", "CO"))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (superaLimite)
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        androidx.compose.ui.graphics.Color(0xFFE8F5E9),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (superaLimite) Icons.Default.Warning else Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (superaLimite)
+                                MaterialTheme.colorScheme.error
+                            else
+                                androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Precio CREG ($tipo): $${formato.format(limite)}/gal",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (superaLimite)
+                                MaterialTheme.colorScheme.error
+                            else
+                                androidx.compose.ui.graphics.Color(0xFF2E7D32),
+                        )
+                    }
+                }
+            }
+        }
+
         OutlinedTextField(
             value = precio,
-            onValueChange = { precio = it },
+            onValueChange = {
+                precio = it
+                estado = ""
+            },
             label = { Text("Nuevo precio") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = superaLimite,
+            supportingText = if (superaLimite) {
+                { Text("Supera el precio regulado por la CREG") }
+            } else null,
+            trailingIcon = if (superaLimite) {
+                { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) }
+            } else if (precioValido && precio.isNotEmpty()) {
+                { Icon(Icons.Default.Check, contentDescription = null, tint = androidx.compose.ui.graphics.Color(0xFF2E7D32)) }
+            } else null
         )
 
-        if (estado.isNotEmpty()) {
-            Text(
-                estado,
+        AnimatedVisibility(visible = estado.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
                 color = if (estado.startsWith("✓"))
-                    MaterialTheme.colorScheme.primary
+                    MaterialTheme.colorScheme.primaryContainer
                 else
-                    MaterialTheme.colorScheme.error
-            )
+                    MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = estado,
+                    modifier = Modifier.padding(12.dp),
+                    color = if (estado.startsWith("✓"))
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else
+                        MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         Button(
             onClick = {
-                val precioDouble = precio.toDoubleOrNull()
-
-                if (precioDouble == null) {
-                    estado = "Precio inválido"
-                    return@Button
-                }
-
                 scope.launch {
                     loading = true
                     try {
-                        val request = listOf(UpdateFuelPriceRequest(tipo, precioDouble))
-                        api.updatePrices(request)
-
-                        estado = "✓ Precio actualizado"
+                        val request = listOf(UpdateFuelPriceRequest(tipo, precioDouble!!))
+                        stationApi.updatePrices(request)
+                        estado = "✓ Precio actualizado correctamente"
                         precio = ""
-
-                        preciosActuales = api.getMyPrices()
-
+                        preciosActuales = stationApi.getMyPrices()
                     } catch (e: Exception) {
                         Log.e("Admin", "Error actualizando precio", e)
                         estado = "✗ Error: ${e.message}"
@@ -1307,31 +1386,53 @@ fun PreciosScreen(modifier: Modifier = Modifier) {
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            enabled = precioValido && !loading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
         ) {
             if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
             } else {
-                Text("Actualizar precio")
+                Text("Actualizar precio", style = MaterialTheme.typography.labelLarge)
             }
         }
-        HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+
+        HorizontalDivider()
 
         Text("Precios actuales", style = MaterialTheme.typography.titleMedium)
 
         if (loadingPrecios) {
-            CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
-            preciosActuales.forEach {
+            preciosActuales.forEach { item ->
+                val icono = when (item.fuelType) {
+                    "CORRIENTE" -> "⛽"
+                    "EXTRA"     -> "🔋"
+                    "DIESEL"    -> "🚛"
+                    else        -> "⛽"
+                }
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(it.fuelType ?: "—")
-                        Text(it.price?.let { p -> "$$p" } ?: "—")
+                        Text("$icono ${item.fuelType ?: "—"}", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            item.price?.let { p ->
+                                "$${NumberFormat.getNumberInstance(Locale("es", "CO")).format(p)}"
+                            } ?: "—",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -1563,12 +1664,10 @@ fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
     val canvas = page.canvas
     val paint = Paint()
 
-    // Título
     paint.textSize = 20f
     paint.isFakeBoldText = true
     canvas.drawText("Historial de Movimientos de Inventario", 40f, 60f, paint)
 
-    // Fecha de generación (no se si funciona)
     paint.textSize = 12f
     paint.isFakeBoldText = false
     paint.color = Color.GRAY
