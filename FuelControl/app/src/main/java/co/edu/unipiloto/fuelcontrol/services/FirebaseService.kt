@@ -69,7 +69,6 @@ class FirebaseService : FirebaseMessagingService() {
 
         Log.d("FCM", "Nuevo token: $token")
 
-        // 👉 Aquí deberías enviarlo a tu backend
     }
 
     private fun showNotification(title: String?, body: String?) {

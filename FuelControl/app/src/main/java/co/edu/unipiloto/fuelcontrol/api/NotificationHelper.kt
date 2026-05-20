@@ -31,6 +31,38 @@ object NotificationHelper {
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    fun sendRouteSuggestion(
+        context: Context,
+        station:String,
+        distance:String,
+        ahorro:String
+    ){
+
+        val notification =
+            NotificationCompat.Builder(
+                context,
+                CHANNEL_ID
+            )
+                .setSmallIcon(
+                    R.drawable.ic_launcher_foreground
+                )
+                .setContentTitle(
+                    "⛽ Ruta inteligente"
+                )
+                .setContentText(
+                    "$station está a $distance, esta mas cerca por si quieres ir a tanquear"
+                )
+                .setPriority(
+                    NotificationCompat.PRIORITY_HIGH
+                )
+                .build()
+
+        NotificationManagerCompat
+            .from(context)
+            .notify(999,notification)
+    }
+
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun sendFuelAlert(context: Context, fuelType: String, percentage: Double) {
         val intent = Intent(context, AdminDashboardActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

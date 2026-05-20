@@ -47,6 +47,7 @@ import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
 import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.models.AlertResponse
+import co.edu.unipiloto.fuelcontrol.services.SmartRouteService
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
@@ -62,6 +63,10 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 import java.util.Locale
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class Gasolinera(
     val id: Long,
@@ -480,42 +485,64 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         position = CameraPosition.fromLatLngZoom(bogota, 12f)
     }
 
+    fun distanciaKm(a: LatLng, b: LatLng): Double {
+        val R = 6371.0
+        val dLat = Math.toRadians(b.latitude  - a.latitude)
+        val dLng = Math.toRadians(b.longitude - a.longitude)
+        val sinLat = sin(dLat / 2)
+        val sinLng = sin(dLng / 2)
+        val c = 2 * asin(
+            sqrt(
+                sinLat * sinLat +
+                        cos(Math.toRadians(a.latitude)) *
+                        cos(Math.toRadians(b.latitude)) *
+                        sinLng * sinLng
+            )
+        )
+        return R * c
+    }
+
     LaunchedEffect(Unit) {
 
         try {
             val stations = apiService.getAllStations()
-
-            val gasolinerasConCoords = stations.map { station ->
-                val coords = getLatLngFromAddress(context, station.address)
-
+            gasolineras = stations.map { station ->
                 Gasolinera(
-                    id = station.id,
-                    nombre = station.name,
+                    id        = station.id,
+                    nombre    = station.name,
                     direccion = station.address,
-                    latLng = coords
+                    latLng    = getLatLngFromAddress(context, station.address)
                 )
             }
-
-            gasolineras = gasolinerasConCoords
             isLoading = false
-
         } catch (e: Exception) {
             Toast.makeText(context, "Error al cargar estaciones", Toast.LENGTH_LONG).show()
             isLoading = false
         }
 
         if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 location?.let {
-                    val latLng = LatLng(it.latitude, it.longitude)
-                    userLocation = latLng
+                    val userLatLng = LatLng(it.latitude, it.longitude)
+                    userLocation = userLatLng
                     cameraPositionState.position =
-                        CameraPosition.fromLatLngZoom(latLng, 14f)
+                        CameraPosition.fromLatLngZoom(userLatLng, 14f)
+
+                    val conCoords = gasolineras.filter { g -> g.latLng != null }
+
+                    if (conCoords.isNotEmpty()) {
+                        val intent = Intent(context, SmartRouteService::class.java).apply {
+                            putExtra("user_lat",      it.latitude)
+                            putExtra("user_lng",      it.longitude)
+                            putExtra("station_names", conCoords.map { g -> g.nombre }.toTypedArray())
+                            putExtra("station_lats",  conCoords.map { g -> g.latLng!!.latitude }.toDoubleArray())
+                            putExtra("station_lngs",  conCoords.map { g -> g.latLng!!.longitude }.toDoubleArray())
+                        }
+                        context.startService(intent)
+                    }
                 }
             }
         }
@@ -581,8 +608,6 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         }
 
         gasolineraSeleccionada?.let { seleccionada ->
-
-            // 👇 fuerza recomposición del botón
             val siguiendo = isFollowing(seleccionada.id)
             refreshFollowState
 
@@ -674,8 +699,8 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
-                            val lat = seleccionada.latLng?.latitude ?: 0.0
-                            val lng = seleccionada.latLng?.longitude ?: 0.0
+                            val lat = seleccionada.latLng?.latitude ?: return@Button
+                            val lng = seleccionada.latLng.longitude
 
                             val wazeUri =
                                 "https://waze.com/ul?ll=$lat,$lng&navigate=yes".toUri()
@@ -686,11 +711,35 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
                     ) {
                         Text("Navegar en Waze")
                     }
+
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+
+                            val lat = seleccionada.latLng?.latitude ?: return@Button
+                            val lng = seleccionada.latLng.longitude
+
+                            val gmmIntentUri =
+                                "google.navigation:q=$lat,$lng".toUri()
+
+                            val mapIntent =
+                                Intent(Intent.ACTION_VIEW, gmmIntentUri)
+
+                            mapIntent.setPackage("com.google.android.apps.maps")
+
+                            context.startActivity(mapIntent)
+                        }
+                    ) {
+                        Text("Navegar en Google Maps")
+                    }
+
+
                 }
             }
         }
     }
 }
+
 @Composable
 fun PagosScreen(modifier: Modifier = Modifier) {
 
