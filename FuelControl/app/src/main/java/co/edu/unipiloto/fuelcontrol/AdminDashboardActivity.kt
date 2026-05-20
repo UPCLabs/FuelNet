@@ -584,18 +584,31 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
     val prefs = context.getSharedPreferences("FuelControlPrefs", Context.MODE_PRIVATE)
     val token = "Bearer " + (prefs.getString("token", "") ?: "")
     val api = Client.getClient(context).create(IPaymentApi::class.java)
+    val stationApi = Client.getClient(context).create(IStationApi::class.java)
+    val scope = rememberCoroutineScope()
 
     var email by remember { mutableStateOf("") }
     var galones by remember { mutableStateOf("") }
-    var monto by remember { mutableStateOf("") }
+    var montoRaw by remember { mutableStateOf("") }
     var combustibleSeleccionado by remember { mutableStateOf("CORRIENTE") }
     var expandedSpinner by remember { mutableStateOf(false) }
     var tvEstado by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var facturas by remember { mutableStateOf<List<PaymentResponse>>(emptyList()) }
     var loadingFacturas by remember { mutableStateOf(true) }
+    var preciosEstacion by remember { mutableStateOf<List<FuelPriceDto>>(emptyList()) }
+
+    var editandoGalones by remember { mutableStateOf(false) }
+    var editandoMonto by remember { mutableStateOf(false) }
 
     val combustibles = listOf("CORRIENTE", "EXTRA", "DIESEL")
+
+    val formato = NumberFormat.getNumberInstance(Locale("es", "CO"))
+    fun formatearCOP(valor: Double) = formato.format(valor.toLong())
+
+    val precioUnitario: Double? = preciosEstacion
+        .firstOrNull { it.fuelType.equals(combustibleSeleccionado, ignoreCase = true) }
+        ?.price
 
     LaunchedEffect(Unit) {
         api.getAdminPayments(token).enqueue(object : Callback<List<PaymentResponse>> {
@@ -608,6 +621,20 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
                 loadingFacturas = false
             }
         })
+
+        try {
+            preciosEstacion = stationApi.getMyPrices()
+        } catch (e: Exception) {
+            Log.e("FACTURAS", "Error cargando precios: ${e.message}")
+        }
+    }
+
+    LaunchedEffect(combustibleSeleccionado) {
+        val g = galones.toDoubleOrNull()
+        val p = precioUnitario
+        if (g != null && p != null) {
+            montoRaw = "%.0f".format(g * p)
+        }
     }
 
     LazyColumn(
@@ -615,53 +642,175 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text("Panel Administrador", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Panel Administrador",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(Modifier.height(16.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Correo del cliente") }, modifier = Modifier.fillMaxWidth())
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Correo del cliente") },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(8.dp))
-            ExposedDropdownMenuBox(expanded = expandedSpinner, onExpandedChange = { expandedSpinner = !expandedSpinner }) {
+
+            ExposedDropdownMenuBox(
+                expanded = expandedSpinner,
+                onExpandedChange = { expandedSpinner = !expandedSpinner }
+            ) {
                 OutlinedTextField(
-                    value = combustibleSeleccionado, onValueChange = {}, readOnly = true,
+                    value = combustibleSeleccionado,
+                    onValueChange = {},
+                    readOnly = true,
                     label = { Text("Tipo de combustible") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSpinner) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                 )
-                ExposedDropdownMenu(expanded = expandedSpinner, onDismissRequest = { expandedSpinner = false }) {
-                    combustibles.forEach { tipo -> DropdownMenuItem(text = { Text(tipo) }, onClick = { combustibleSeleccionado = tipo; expandedSpinner = false }) }
+                ExposedDropdownMenu(
+                    expanded = expandedSpinner,
+                    onDismissRequest = { expandedSpinner = false }
+                ) {
+                    combustibles.forEach { tipo ->
+                        DropdownMenuItem(
+                            text = { Text(tipo) },
+                            onClick = { combustibleSeleccionado = tipo; expandedSpinner = false }
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = galones, onValueChange = { galones = it }, label = { Text("Galones") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(value = monto, onValueChange = { monto = it }, label = { Text("Monto ($)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            if (tvEstado.isNotEmpty()) {
-                Text(text = tvEstado, color = if (tvEstado.startsWith("✓")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(8.dp))
+
+            AnimatedVisibility(visible = precioUnitario != null) {
+                precioUnitario?.let { p ->
+                    val formato = NumberFormat.getNumberInstance(Locale("es", "CO"))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "⛽ Precio $combustibleSeleccionado: $${formato.format(p)}/gal",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
+                }
             }
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = galones,
+                onValueChange = { value ->
+                    if (!editandoMonto) {
+                        editandoGalones = true
+                        galones = value
+                        val g = value.toDoubleOrNull()
+                        val p = precioUnitario
+                        montoRaw = if (g != null && p != null) "%.0f".format(g * p) else ""
+                        editandoGalones = false
+                    }
+                },
+                label = { Text("Galones") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                suffix = { Text("gal") }
+            )
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = montoRaw.toDoubleOrNull()?.let { formatearCOP(it) } ?: montoRaw,
+                onValueChange = { value ->
+                    if (!editandoGalones) {
+                        editandoMonto = true
+                        val limpio = value.replace(".", "")
+                        montoRaw = limpio
+                        val m = limpio.toDoubleOrNull()
+                        val p = precioUnitario
+                        galones = if (m != null && p != null && p > 0) "%.3f".format(m / p) else ""
+                        editandoMonto = false
+                    }
+                },
+                label = { Text("Monto") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                suffix = { Text("COP") }
+            )
+            Spacer(Modifier.height(8.dp))
+
+            AnimatedVisibility(visible = tvEstado.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (tvEstado.startsWith("✓"))
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = tvEstado,
+                        modifier = Modifier.padding(12.dp),
+                        color = if (tvEstado.startsWith("✓"))
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
             Button(
                 onClick = {
-                    if (email.isEmpty() || galones.isEmpty() || monto.isEmpty()) { tvEstado = "Completa todos los campos"; return@Button }
+                    if (email.isEmpty() || galones.isEmpty() || montoRaw.isEmpty()) {
+                        tvEstado = "Completa todos los campos"
+                        return@Button
+                    }
                     isLoading = true
-                    val request = CreatePaymentRequest(userEmail = email, fuelType = combustibleSeleccionado, gallons = galones.toDoubleOrNull() ?: 0.0, amount = monto.toDoubleOrNull() ?: 0.0)
+                    val request = CreatePaymentRequest(
+                        userEmail = email,
+                        fuelType = combustibleSeleccionado,
+                        gallons = galones.toDoubleOrNull() ?: 0.0,
+                        amount = montoRaw.toDoubleOrNull() ?: 0.0
+                    )
                     api.createPayment(token, request).enqueue(object : Callback<PaymentResponse> {
                         override fun onResponse(call: Call<PaymentResponse>, response: Response<PaymentResponse>) {
                             isLoading = false
                             if (response.isSuccessful && response.body() != null) {
                                 tvEstado = "✓ Factura creada correctamente"
                                 facturas = listOf(response.body()!!) + facturas
-                                email = ""; galones = ""; monto = ""
-                            } else { tvEstado = "Error al crear la factura (${response.code()})" }
+                                email = ""; galones = ""; montoRaw = ""
+                            } else {
+                                tvEstado = "Error al crear la factura (${response.code()})"
+                            }
                         }
-                        override fun onFailure(call: Call<PaymentResponse>, t: Throwable) { isLoading = false; tvEstado = "Error de conexión" }
+                        override fun onFailure(call: Call<PaymentResponse>, t: Throwable) {
+                            isLoading = false
+                            tvEstado = "Error de conexión"
+                        }
                     })
                 },
                 enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 else Text("Crear Factura")
             }
+
             Spacer(Modifier.height(16.dp))
             Text("Facturas registradas", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
@@ -671,7 +820,10 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
             items(4) { SkeletonCard() }
         } else {
             items(facturas) { factura ->
-                Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -679,10 +831,25 @@ fun FacturasScreen(modifier: Modifier = Modifier) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(factura.clientName, fontWeight = FontWeight.Bold)
-                            Text(factura.clientEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${factura.fuelType} • ${factura.gallons} gal • $${factura.amount}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                factura.clientEmail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "${factura.fuelType} • ${factura.gallons} gal • $${NumberFormat.getNumberInstance(Locale("es", "CO")).format(factura.amount)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Text(text = factura.status, color = if (factura.status == "PENDING") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = factura.status,
+                            color = if (factura.status == "PENDING")
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -924,7 +1091,6 @@ fun RecargasTab() {
 fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
     val scope = CoroutineScope(Dispatchers.IO)
     scope.launch {
-        //llamada de los precios, nada nuevo
         val precios = try {
             Client.getClient(context).create(IStationApi::class.java).getMyPrices()
         } catch (e: Exception) { emptyList() }
@@ -939,96 +1105,145 @@ fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
             val paint = Paint()
             val formato = NumberFormat.getNumberInstance(Locale("es", "CO"))
 
+            // ── ENCABEZADO ───────────────────────────────────────────
+            val headerBg = Paint().apply { color = Color.parseColor("#1565C0"); style = Paint.Style.FILL }
+            canvas.drawRect(0f, 0f, 595f, 70f, headerBg)
 
-            paint.textSize = 18f
+            paint.textSize = 20f
             paint.isFakeBoldText = true
-            paint.color = Color.BLACK
-            canvas.drawText("Historial de Movimientos de Inventario", 40f, 55f, paint)
+            paint.color = Color.WHITE
+            canvas.drawText("Estado Financiero de Inventario", 40f, 32f, paint)
 
             paint.textSize = 11f
             paint.isFakeBoldText = false
-            paint.color = Color.GRAY
             canvas.drawText(
                 "Generado: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())}",
-                40f, 75f, paint
+                40f, 52f, paint
             )
-            canvas.drawText("Total de movimientos: ${historial.size}", 380f, 75f, paint)
+            canvas.drawText("Total movimientos: ${historial.size}", 420f, 52f, paint)
 
+            // ── RESUMEN FINANCIERO (tarjetas) ────────────────────────
+            var totalIngresos = 0.0
+            var totalEgresos = 0.0
+            historial.forEach { mov ->
+                val precio = precioMap[mov.fuelType] ?: 0.0
+                val valor = Math.abs(mov.gallonsAdded) * precio
+                if (mov.gallonsAdded < 0) totalIngresos += valor
+                else totalEgresos += valor
+            }
+            val balance = totalIngresos - totalEgresos
+
+            // Tarjeta Ingresos
+            val cardIngreso = Paint().apply { color = Color.parseColor("#E8F5E9"); style = Paint.Style.FILL }
+            canvas.drawRoundRect(android.graphics.RectF(40f, 85f, 190f, 145f), 8f, 8f, cardIngreso)
+            val borderIngreso = Paint().apply { color = Color.parseColor("#2E7D32"); style = Paint.Style.STROKE; strokeWidth = 1.5f }
+            canvas.drawRoundRect(android.graphics.RectF(40f, 85f, 190f, 145f), 8f, 8f, borderIngreso)
+            paint.textSize = 9f; paint.isFakeBoldText = false; paint.color = Color.parseColor("#2E7D32")
+            canvas.drawText("INGRESOS (Ventas)", 50f, 100f, paint)
+            paint.textSize = 14f; paint.isFakeBoldText = true
+            canvas.drawText("$${formato.format(totalIngresos.toLong())}", 50f, 122f, paint)
+            paint.textSize = 9f; paint.isFakeBoldText = false
+            canvas.drawText("↑ Combustible vendido", 50f, 138f, paint)
+
+            // Tarjeta Egresos
+            val cardEgreso = Paint().apply { color = Color.parseColor("#FFEBEE"); style = Paint.Style.FILL }
+            canvas.drawRoundRect(android.graphics.RectF(202f, 85f, 352f, 145f), 8f, 8f, cardEgreso)
+            val borderEgreso = Paint().apply { color = Color.parseColor("#C62828"); style = Paint.Style.STROKE; strokeWidth = 1.5f }
+            canvas.drawRoundRect(android.graphics.RectF(202f, 85f, 352f, 145f), 8f, 8f, borderEgreso)
+            paint.color = Color.parseColor("#C62828")
+            canvas.drawText("EGRESOS (Compras)", 212f, 100f, paint)
+            paint.textSize = 14f; paint.isFakeBoldText = true
+            canvas.drawText("$${formato.format(totalEgresos.toLong())}", 212f, 122f, paint)
+            paint.textSize = 9f; paint.isFakeBoldText = false
+            canvas.drawText("↓ Combustible comprado", 212f, 138f, paint)
+
+            // Tarjeta Balance
+            val balancePositivo = balance >= 0
+            val cardBalance = Paint().apply {
+                color = if (balancePositivo) Color.parseColor("#E3F2FD") else Color.parseColor("#FFF3E0")
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(android.graphics.RectF(364f, 85f, 555f, 145f), 8f, 8f, cardBalance)
+            val borderBalance = Paint().apply {
+                color = if (balancePositivo) Color.parseColor("#1565C0") else Color.parseColor("#E65100")
+                style = Paint.Style.STROKE; strokeWidth = 1.5f
+            }
+            canvas.drawRoundRect(android.graphics.RectF(364f, 85f, 555f, 145f), 8f, 8f, borderBalance)
+            paint.color = if (balancePositivo) Color.parseColor("#1565C0") else Color.parseColor("#E65100")
+            canvas.drawText("BALANCE NETO", 374f, 100f, paint)
+            paint.textSize = 14f; paint.isFakeBoldText = true
+            canvas.drawText(
+                "${if (balancePositivo) "+" else ""}$${formato.format(balance.toLong())}",
+                374f, 122f, paint
+            )
+            paint.textSize = 9f; paint.isFakeBoldText = false
+            canvas.drawText(if (balancePositivo) "Operación rentable" else "Operación en déficit", 374f, 138f, paint)
+
+            // ── TABLA DE MOVIMIENTOS ─────────────────────────────────
             paint.color = Color.BLACK
-            paint.strokeWidth = 1.5f
-            canvas.drawLine(40f, 85f, 555f, 85f, paint)
-
+            paint.strokeWidth = 1f
+            canvas.drawLine(40f, 155f, 555f, 155f, paint)
 
             paint.isFakeBoldText = true
             paint.textSize = 11f
             paint.color = Color.WHITE
             val headerPaint = Paint().apply { color = Color.parseColor("#1565C0"); style = Paint.Style.FILL }
-            canvas.drawRect(40f, 92f, 555f, 112f, headerPaint)
+            canvas.drawRect(40f, 160f, 555f, 180f, headerPaint)
 
-            canvas.drawText("Tipo",       50f,  107f, paint)
-            canvas.drawText("Mov.",      130f,  107f, paint)
-            canvas.drawText("Proveedor", 185f,  107f, paint)
-            canvas.drawText("Galones",   340f,  107f, paint)
-            canvas.drawText("Valor",     420f,  107f, paint)
-            canvas.drawText("Fecha",     490f,  107f, paint)
-
+            canvas.drawText("Tipo",       50f,  175f, paint)
+            canvas.drawText("Concepto",  130f,  175f, paint)
+            canvas.drawText("Proveedor", 220f,  175f, paint)
+            canvas.drawText("Galones",   355f,  175f, paint)
+            canvas.drawText("Valor",     420f,  175f, paint)
+            canvas.drawText("Fecha",     490f,  175f, paint)
 
             paint.isFakeBoldText = false
             paint.textSize = 10f
             paint.color = Color.BLACK
 
-            var y = 130f
+            var y = 200f
             var totalGalones = 0.0
-            var totalValor = 0.0
-
-            // Subtotales por tipo
-            val subtotales = mutableMapOf<String, Pair<Double, Double>>() // tipo → (galones, valor)
+            val subtotales = mutableMapOf<String, Triple<Double, Double, Double>>() // tipo → (galon ingreso, galon egreso, valor neto)
 
             historial.forEachIndexed { index, mov ->
-                // Fila alternada
                 if (index % 2 == 0) {
                     val bgPaint = Paint().apply { color = Color.parseColor("#F5F5F5"); style = Paint.Style.FILL }
                     canvas.drawRect(40f, y - 12f, 555f, y + 6f, bgPaint)
                 }
 
-                val esRecarga = mov.gallonsAdded >= 0
+                val esVenta = mov.gallonsAdded < 0  // venta = ingreso
                 val precio = precioMap[mov.fuelType] ?: 0.0
-                val valor = mov.gallonsAdded * precio
+                val valor = Math.abs(mov.gallonsAdded) * precio
 
-                // Tipo
                 paint.color = Color.BLACK
                 canvas.drawText(mov.fuelType, 50f, y, paint)
 
-                // Movimiento (recarga o venta)
-                paint.color = if (esRecarga) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
-                canvas.drawText(if (esRecarga) "↑ Recarga" else "↓ Venta", 130f, y, paint)
+                // Concepto con color
+                paint.color = if (esVenta) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+                canvas.drawText(if (esVenta) "↑ Ingreso" else "↓ Egreso", 130f, y, paint)
 
-                // Proveedor
                 paint.color = Color.DKGRAY
-                val proveedorTexto = (mov.supplier ?: "—").take(18)
-                canvas.drawText(proveedorTexto, 185f, y, paint)
+                canvas.drawText((mov.supplier ?: "—").take(15), 220f, y, paint)
 
-                // Galones
-                paint.color = if (esRecarga) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+                paint.color = if (esVenta) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+                canvas.drawText("${Math.abs(mov.gallonsAdded).toInt()} gal", 355f, y, paint)
+
+                paint.color = Color.BLACK
                 canvas.drawText(
-                    "${if (esRecarga) "+" else ""}${mov.gallonsAdded.toInt()} gal",
-                    340f, y, paint
+                    "${if (esVenta) "+" else "-"}$${formato.format(valor.toLong())}",
+                    420f, y, paint
                 )
 
-                // deberia salir el precio y pues en pesos
-                paint.color = Color.BLACK
-                canvas.drawText("$${formato.format(valor.toLong())}", 420f, y, paint)
-
-                // Fecha
                 paint.color = Color.GRAY
                 canvas.drawText(mov.rechargeDate.take(10), 490f, y, paint)
 
-                // Acumulados
-                totalGalones += mov.gallonsAdded
-                totalValor += valor
+                totalGalones += Math.abs(mov.gallonsAdded)
 
-                val (gAnt, vAnt) = subtotales[mov.fuelType] ?: Pair(0.0, 0.0)
-                subtotales[mov.fuelType] = Pair(gAnt + mov.gallonsAdded, vAnt + valor)
+                val (gIn, gOut, vNeto) = subtotales[mov.fuelType] ?: Triple(0.0, 0.0, 0.0)
+                subtotales[mov.fuelType] = if (esVenta)
+                    Triple(gIn + Math.abs(mov.gallonsAdded), gOut, vNeto + valor)
+                else
+                    Triple(gIn, gOut + Math.abs(mov.gallonsAdded), vNeto - valor)
 
                 y += 22f
             }
@@ -1039,50 +1254,61 @@ fun generarPDF(context: Context, historial: List<InventoryMovementResponse>) {
             canvas.drawLine(40f, y + 5f, 555f, y + 5f, paint)
             y += 22f
 
-            // aqwui hay subtotal por tipo
+            // ── RESUMEN POR TIPO ─────────────────────────────────────
             paint.isFakeBoldText = true
             paint.textSize = 11f
             paint.color = Color.BLACK
             canvas.drawText("Resumen por tipo de combustible", 40f, y, paint)
             y += 18f
 
-            val subHeaderPaint = Paint().apply { color = Color.parseColor("#E3F2FD"); style = Paint.Style.FILL }
-            canvas.drawRect(40f, y - 12f, 555f, y + 60f, subHeaderPaint)
-
-            paint.isFakeBoldText = false
-            paint.textSize = 10f
-
-            subtotales.forEach { (tipo, par) ->
-                val (galones, valor) = par
+            subtotales.forEach { (tipo, triple) ->
+                val (gIn, gOut, vNeto) = triple
                 val precioPorGalon = precioMap[tipo] ?: 0.0
-                val icono = when (tipo) { "CORRIENTE" -> "[C]"; "DIESEL" -> "[D]"; else -> "[E]" }
-                canvas.drawText("$icono $tipo", 50f, y, paint)
-                canvas.drawText("${galones.toInt()} gal", 230f, y, paint)
-                canvas.drawText("× $${formato.format(precioPorGalon.toLong())}/gal", 310f, y, paint)
-                paint.isFakeBoldText = true
-                canvas.drawText("= $${formato.format(valor.toLong())}", 430f, y, paint)
+                val icono = when (tipo) { "CORRIENTE" -> "⬡ C"; "DIESEL" -> "⬡ D"; else -> "⬡ E" }
+
+                val subBg = Paint().apply {
+                    color = if (vNeto >= 0) Color.parseColor("#F1F8E9") else Color.parseColor("#FBE9E7")
+                    style = Paint.Style.FILL
+                }
+                canvas.drawRect(40f, y - 12f, 555f, y + 8f, subBg)
+
                 paint.isFakeBoldText = false
-                y += 20f
+                paint.textSize = 10f
+                paint.color = Color.BLACK
+                canvas.drawText("$icono $tipo", 50f, y, paint)
+                canvas.drawText("Vendido: ${gIn.toInt()} gal", 170f, y, paint)
+                canvas.drawText("Comprado: ${gOut.toInt()} gal", 300f, y, paint)
+                paint.color = if (vNeto >= 0) Color.parseColor("#2E7D32") else Color.parseColor("#C62828")
+                paint.isFakeBoldText = true
+                canvas.drawText(
+                    "Neto: ${if (vNeto >= 0) "+" else ""}$${formato.format(vNeto.toLong())}",
+                    430f, y, paint
+                )
+                y += 22f
             }
 
-            y += 10f
-
-            // deberia salir el total general
-            val totalPaint = Paint().apply { color = Color.parseColor("#1565C0"); style = Paint.Style.FILL }
-            canvas.drawRect(40f, y - 14f, 555f, y + 10f, totalPaint)
+            // ── TOTAL FINAL ──────────────────────────────────────────
+            y += 8f
+            val totalPaint = Paint().apply {
+                color = if (balancePositivo) Color.parseColor("#1565C0") else Color.parseColor("#B71C1C")
+                style = Paint.Style.FILL
+            }
+            canvas.drawRect(40f, y - 14f, 555f, y + 12f, totalPaint)
 
             paint.isFakeBoldText = true
             paint.textSize = 12f
             paint.color = Color.WHITE
-            canvas.drawText("TOTAL GALONES:", 50f, y, paint)
-            canvas.drawText("${totalGalones.toInt()} gal", 280f, y, paint)
-            canvas.drawText("TOTAL: $${formato.format(totalValor.toLong())}", 370f, y, paint)
+            canvas.drawText("TOTAL GALONES MOVIDOS: ${totalGalones.toInt()} gal", 50f, y, paint)
+            canvas.drawText(
+                "BALANCE: ${if (balancePositivo) "+" else ""}$${formato.format(balance.toLong())}",
+                350f, y, paint
+            )
 
             document.finishPage(page)
 
-            // se deberia guardar y abrir
+            // ── GUARDAR Y ABRIR ──────────────────────────────────────
             try {
-                val fileName = "inventario_${System.currentTimeMillis()}.pdf"
+                val fileName = "financiero_${System.currentTimeMillis()}.pdf"
                 val file = File(context.getExternalFilesDir(null), fileName)
                 document.writeTo(FileOutputStream(file))
                 document.close()
