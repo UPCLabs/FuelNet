@@ -185,7 +185,7 @@ fun SolicitudesScreen(modifier: Modifier = Modifier) {
     }
 
     when {
-        isLoading -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        isLoading -> SkeletonList()
         error != null -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) { Text(error!!, color = MaterialTheme.colorScheme.error) }
         solicitudes.isEmpty() -> Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -277,7 +277,7 @@ fun SuperAdminPerfilScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(24.dp))
 
         if (loading) {
-            CircularProgressIndicator()
+            SkeletonList(count = 3)
         } else {
             user?.let {
                 Text("Nombre: ${it.name}")

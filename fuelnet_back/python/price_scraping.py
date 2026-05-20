@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_DOMAIN = "https://gestornormativo.creg.gov.co"
-BASE_PATH = "/gestor/entorno/"  # ruta base donde viven los hrefs relativos
+BASE_PATH = "/gestor/entorno/"
 
 NOVELTIES_URL = (
     "https://gestornormativo.creg.gov.co/gestor/entorno/"
@@ -16,12 +16,12 @@ NOVELTIES_URL = (
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-# Keywords de precios en minúsculas para comparación
+
 PRICE_KEYWORDS = [
     "publicación de precios",
     "precios de referencia",
     "venta al público",
-    "venta al publico",  # FIX: sin tilde también
+    "venta al publico",
 ]
 
 
@@ -32,13 +32,10 @@ def get_response(url):
 
 
 def build_url(href):
-    # Ya es URL completa
     if href.startswith("http"):
         return href
-    # Absoluto desde raíz del dominio
     if href.startswith("/"):
         return BASE_DOMAIN + href
-    # Relativo: "docs/originales/..." → necesita BASE_PATH como base
     return BASE_DOMAIN + BASE_PATH + href
 
 
@@ -55,19 +52,13 @@ def find_price_circulars():
         if not text or not href:
             continue
 
-        # FIX: usar casefold() para comparación robusta de mayúsculas/minúsculas/tildes
         text_cf = text.casefold()
 
-        # Solo circulares
         if "circular" not in text_cf:
             continue
 
-        # Debe contener keywords de precios
         if not any(k in text_cf for k in PRICE_KEYWORDS):
             continue
-
-        # FIX: ya no filtramos por "/docs/originales/" para no excluir circulares
-        # con rutas distintas (ej: años anteriores usan otras rutas)
 
         full_url = build_url(href)
         circulars.append({"title": text, "url": full_url})

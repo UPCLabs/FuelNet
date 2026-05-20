@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.lifecycle.lifecycleScope
 import co.edu.unipiloto.fuelcontrol.api.Client
 import co.edu.unipiloto.fuelcontrol.api.IAuthApi
 import co.edu.unipiloto.fuelcontrol.api.IPaymentApi
@@ -63,6 +62,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 import java.util.Locale
+
 data class Gasolinera(
     val id: Long,
     @SerializedName("name")
@@ -736,7 +736,7 @@ fun PagosScreen(modifier: Modifier = Modifier) {
         )
 
         when {
-            isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+             isLoading -> SkeletonList()
             error != null -> Text(text = error!!, color = MaterialTheme.colorScheme.error)
             pagos.isEmpty() -> Text("No tienes pagos pendientes")
             else -> {
@@ -920,7 +920,7 @@ fun NotificacionesScreen(modifier: Modifier = Modifier) {
         )
 
         when {
-            isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            isLoading -> SkeletonList()
             error != null -> Text(text = error!!, color = MaterialTheme.colorScheme.error)
             alertas.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
