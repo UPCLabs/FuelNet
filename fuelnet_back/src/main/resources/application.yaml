@@ -30,3 +30,6 @@ scraper:
     path: /usr/bin/python3
   script:
     path: /app/price_scraping.py
+fuelnet:
+  adminpassword: admin
+  jwt_secret: token_super_secreto1234

@@ -6,13 +6,17 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+
 import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
 
-    private final String SECRET_KEY = "super_secret_key_that_is_long_enough_123456";
+    @Value("${fuelnet.jwt_secret}")
+    private String secretKey;
 
     public String generateToken(StationUser user) {
         return Jwts.builder()
@@ -23,7 +27,7 @@ public class JwtService {
                 .setExpiration(
                         new Date(System.currentTimeMillis() + 1000 * 60 * 60))
                 .signWith(
-                        Keys.hmacShaKeyFor(SECRET_KEY.getBytes()),
+                        Keys.hmacShaKeyFor(secretKey.getBytes()),
                         SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -35,14 +39,14 @@ public class JwtService {
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
                 .signWith(
-                        Keys.hmacShaKeyFor(SECRET_KEY.getBytes()),
+                        Keys.hmacShaKeyFor(secretKey.getBytes()),
                         SignatureAlgorithm.HS256)
                 .compact();
     }
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY.getBytes())
+                .setSigningKey(secretKey.getBytes())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

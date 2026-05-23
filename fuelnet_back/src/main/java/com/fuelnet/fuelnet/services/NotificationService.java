@@ -5,6 +5,7 @@ import com.fuelnet.fuelnet.models.DeviceToken;
 import com.fuelnet.fuelnet.repositories.IDeviceTokenRepository;
 import org.springframework.stereotype.Service;
 
+import com.google.firebase.ErrorCode;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -54,7 +55,7 @@ public class NotificationService {
                     String failedToken = tokenList.get(i);
                     FirebaseMessagingException e = responses.get(i).getException();
 
-                    if (e.getErrorCode().equals("registration-token-not-registered")) {
+                    if (e.getErrorCode().equals(ErrorCode.NOT_FOUND)) {
                         tokenRepository.findByToken(failedToken)
                                 .ifPresent(tokenRepository::delete);
                     }

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,9 @@ public class DataInit implements CommandLineRunner {
 
     private final IStationUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${fuelnet.adminpassword}")
+    private String adminPassword;
 
     @Override
     public void run(String... args) {
@@ -32,7 +36,7 @@ public class DataInit implements CommandLineRunner {
                     .birthDate(LocalDate.parse("2006-01-20"))
                     .gender("Masculino")
                     .email(adminEmail)
-                    .password(passwordEncoder.encode("admin"))
+                    .password(passwordEncoder.encode(adminPassword))
                     .role(UserRole.PLATFORM_ADMIN)
                     .build();
 
