@@ -1,11 +1,14 @@
 package co.edu.unipiloto.fuelcontrol
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -47,6 +50,7 @@ import co.edu.unipiloto.fuelcontrol.api.requests.ChangePasswordRequest
 import co.edu.unipiloto.fuelcontrol.api.requests.MeResponse
 import co.edu.unipiloto.fuelcontrol.api.requests.PaymentResponse
 import co.edu.unipiloto.fuelcontrol.models.AlertResponse
+import co.edu.unipiloto.fuelcontrol.services.MapTimerService
 import co.edu.unipiloto.fuelcontrol.services.SmartRouteService
 import co.edu.unipiloto.fuelcontrol.ui.theme.FuelControlTheme
 import com.google.android.gms.location.LocationServices
@@ -56,6 +60,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.gson.annotations.SerializedName
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -485,6 +490,36 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
         position = CameraPosition.fromLatLngZoom(bogota, 12f)
     }
 
+    var segundosEnMapa by remember { mutableStateOf(0) }
+    var timerService by remember { mutableStateOf<MapTimerService?>(null) }
+
+    val serviceConnection = remember {
+        object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                timerService = (binder as MapTimerService.LocalBinder).getService()
+            }
+            override fun onServiceDisconnected(name: ComponentName?) {
+                timerService = null
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val intent = Intent(context, MapTimerService::class.java)
+        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        onDispose {
+            context.unbindService(serviceConnection)
+        }
+    }
+
+    LaunchedEffect(timerService) {
+        while (timerService != null) {
+            segundosEnMapa = timerService?.getSegundos() ?: 0
+            delay(1000L)
+        }
+    }
+
+
     fun distanciaKm(a: LatLng, b: LatLng): Double {
         val R = 6371.0
         val dLat = Math.toRadians(b.latitude  - a.latitude)
@@ -736,6 +771,25 @@ fun MapScreen(modifier: Modifier = Modifier, apiService: IStationApi) {
 
                 }
             }
+        }
+
+        val minutos = segundosEnMapa / 60
+        val segs    = segundosEnMapa % 60
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 4.dp
+        ) {
+            Text(
+                text = "⏱ %02d:%02d en el mapa".format(minutos, segs),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
     }
 }
