@@ -15,6 +15,7 @@ import com.fuelnet.fuelnet.models.StationUser;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
 import com.fuelnet.fuelnet.services.AuthService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
@@ -143,7 +144,7 @@ public class AuthController {
     @PostMapping("/create-employee")
     @PreAuthorize("hasRole('STATION_ADMIN')")
     public ResponseEntity<StationUser> createUser(
-            @RequestBody CreateEmployeeDto request,
+            @Valid @RequestBody CreateEmployeeDto request,
             @AuthenticationPrincipal StationUser admin) {
         return ResponseEntity.ok(
                 authService.createEmployee(request, admin));

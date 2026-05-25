@@ -32,4 +32,10 @@ scraper:
     path: /app/price_scraping.py
 fuelnet:
   adminpassword: admin
-  jwt_secret: token_super_secreto1234
+  jwt_secret: OwUm5vcQw4PoVJ4pCc97nhZpvI8CGtU5asJGbySF8wX
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,mappings

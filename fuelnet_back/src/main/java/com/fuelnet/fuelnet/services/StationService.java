@@ -111,7 +111,7 @@ public class StationService {
 
         for (UpdateFuelPriceRequest r : request) {
             String type = r.getFuelType().toUpperCase();
-            Double submitted = r.getPrice();
+            Double submitted = r.getPrice().doubleValue();
 
             switch (type) {
                 case "CORRIENTE" -> {
@@ -138,7 +138,7 @@ public class StationService {
             prices.stream()
                     .filter(p -> p.getFuelType() == type)
                     .findFirst()
-                    .ifPresent(p -> p.setPrice(r.getPrice()));
+                    .ifPresent(p -> p.setPrice(r.getPrice().doubleValue()));
         }
 
         fuelPriceRepository.saveAll(prices);

@@ -16,7 +16,6 @@ import com.fuelnet.fuelnet.repositories.IAppUserRepository;
 import com.fuelnet.fuelnet.repositories.IPendingUsersRepository;
 import com.fuelnet.fuelnet.repositories.IStationUserRepository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -62,7 +61,7 @@ public class AuthService {
                 .name(request.getName())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .address(request.getAddress())
-                .birthDate(LocalDate.parse(request.getBirthday()))
+                .birthDate(request.getBirthday())
                 .gender(request.getGender())
                 .token(token)
                 .tokenExpiration(LocalDateTime.now().plusHours(24))
